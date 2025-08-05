@@ -1,0 +1,27 @@
+name:  Deploy on SafarCapital Admin
+on:
+  push:
+    branches: ['main']
+jobs:
+  Deploy:
+    runs-on: admin
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+
+      - name: executing remote ssh commands
+        run: |
+          bash -c "
+          set -e
+          cd /home/safar-admin/SafarCapita-AdminPortal
+          git fetch
+          git reset --hard
+          git pull origin main
+          rm -rf node_modules/ 
+          yarn install
+          yarn run build
+          pm2 restart 0"
