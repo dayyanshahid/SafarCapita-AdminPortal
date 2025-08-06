@@ -12,6 +12,9 @@ import {
   Shield,
   Users,
 } from "lucide-react";
+import { useActivePath } from "@/hooks/use-active-path";
+import { cn } from "@/lib/utils";
+import { LogoutButton } from "@/components/admin/logout-button";
 
 import {
   Sidebar,
@@ -79,6 +82,7 @@ const data = {
 export function AdminSidebar({
   ...props
 }: React.ComponentProps<typeof Sidebar>) {
+  const { isActive, pathname } = useActivePath();
   return (
     <Sidebar variant="inset" {...props}>
       <SidebarHeader>
@@ -114,17 +118,45 @@ export function AdminSidebar({
                     {item.items ? (
                       <>
                         <CollapsibleTrigger asChild>
-                          <SidebarMenuButton tooltip={item.title}>
-                            {item.icon && <item.icon />}
+                          <SidebarMenuButton
+                            tooltip={item.title}
+                            className={cn(
+                              item.items?.some((subItem) =>
+                                isActive(subItem.url)
+                              ) && "bg-red-50 text-red-900"
+                            )}
+                          >
+                            {item.icon && (
+                              <item.icon
+                                className={cn(
+                                  item.items?.some((subItem) =>
+                                    isActive(subItem.url)
+                                  ) && "text-red-600"
+                                )}
+                              />
+                            )}
                             <span>{item.title}</span>
-                            <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                            <ChevronRight
+                              className={cn(
+                                "ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90",
+                                item.items?.some((subItem) =>
+                                  isActive(subItem.url)
+                                ) && "text-red-600"
+                              )}
+                            />
                           </SidebarMenuButton>
                         </CollapsibleTrigger>
                         <CollapsibleContent>
                           <SidebarMenuSub>
                             {item.items?.map((subItem) => (
                               <SidebarMenuSubItem key={subItem.title}>
-                                <SidebarMenuSubButton asChild>
+                                <SidebarMenuSubButton
+                                  asChild
+                                  className={cn(
+                                    isActive(subItem.url) &&
+                                      "bg-red-50 text-red-900 hover:bg-red-100"
+                                  )}
+                                >
                                   <a href={subItem.url}>
                                     <span>{subItem.title}</span>
                                   </a>
@@ -135,9 +167,22 @@ export function AdminSidebar({
                         </CollapsibleContent>
                       </>
                     ) : (
-                      <SidebarMenuButton tooltip={item.title} asChild>
+                      <SidebarMenuButton
+                        tooltip={item.title}
+                        asChild
+                        className={cn(
+                          isActive(item.url) &&
+                            "bg-red-50 text-red-900 hover:bg-red-100"
+                        )}
+                      >
                         <a href={item.url}>
-                          {item.icon && <item.icon />}
+                          {item.icon && (
+                            <item.icon
+                              className={cn(
+                                isActive(item.url) && "text-red-600"
+                              )}
+                            />
+                          )}
                           <span>{item.title}</span>
                         </a>
                       </SidebarMenuButton>
@@ -150,12 +195,15 @@ export function AdminSidebar({
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
-        <SidebarMenu>
+        <SidebarMenu className="space-y-2">
           <SidebarMenuItem>
             <SidebarMenuButton>
               <Users className="size-4" />
               <span>Admin User</span>
             </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <LogoutButton />
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>

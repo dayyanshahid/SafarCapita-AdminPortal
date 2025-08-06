@@ -3,7 +3,9 @@
 import type React from "react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useDispatch } from "react-redux";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 import {
   Card,
   CardContent,
@@ -15,9 +17,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Shield, Eye, EyeOff, Lock, User, AlertTriangle } from "lucide-react";
+import makeRequest from "@/Api's/ApiHelper";
+import { LoginAdminApiCall } from "@/Api's/repo";
+import { setUser, showToast } from "@/redux/actions";
+import { encryptData } from "@/lib/utils";
 
 export default function LoginPage() {
   const router = useRouter();
+  const dispatch = useDispatch();
+  const toast = useToast();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -30,21 +38,44 @@ export default function LoginPage() {
     setIsLoading(true);
     setError("");
 
-    // Simulate API call delay
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    try {
+      const response = await makeRequest({
+        url: LoginAdminApiCall,
+        method: "POST",
+        data: { email, password },
+      });
 
-    // For demo purposes - replace with your actual authentication logic
-    if (email === "admin@gmail.com" && password === "12345678") {
-      localStorage.setItem("adminRole", "admin");
-      localStorage.setItem("adminEmail", email);
-      localStorage.setItem("loginTime", new Date().toISOString());
-      router.push("/admin");
-    } else {
-      setError("Invalid credentials. Please try again.");
+      const { data } = response;
+
+      if (data.success && data.token && data.result) {
+        // Store encrypted user data and token
+        const encryptedToken = encryptData(data.token);
+        const encryptedUser = encryptData(data.result);
+
+        localStorage.setItem("_st", encryptedToken); // Secure Token
+        localStorage.setItem("_su", encryptedUser); // Secure User
+        localStorage.setItem("_lt", new Date().toISOString()); // Login Time
+
+        // Update Redux state
+        dispatch(setUser(data.result));
+
+        // Show success toast
+        toast.success(data.message || "Login successful");
+
+        // Use replace instead of push to clear navigation history
+        router.replace("/admin");
+      } else {
+        throw new Error(data.error_message || "Login failed");
+      }
+    } catch (error: any) {
+      setError(error.message || "Invalid credentials. Please try again.");
       setLoginAttempts((prev) => prev + 1);
-    }
 
-    setIsLoading(false);
+      // Show error toast
+      toast.error(error.message || "Login failed");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const clearForm = () => {
@@ -169,11 +200,6 @@ export default function LoginPage() {
                     "Sign In to Admin Portal"
                   )}
                 </Button>
-              </div>
-              <div className="mt-4 text-center text-sm text-muted-foreground">
-                <p className="font-semibold">Demo Credentials:</p>
-                <p>Email: admin@gmail.com</p>
-                <p>Password: 12345678</p>
               </div>
             </form>
           </CardContent>

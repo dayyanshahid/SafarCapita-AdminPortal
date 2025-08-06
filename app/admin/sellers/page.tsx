@@ -1,15 +1,37 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { Progress } from "@/components/ui/progress"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useSelector } from "react-redux";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import makeRequest from "@/Api's/ApiHelper";
+import {
+  getSellerManagementPortalApiCall,
+  getCompanyListApiCall,
+} from "@/Api's/repo";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   Search,
   Filter,
@@ -28,82 +50,196 @@ import {
   ChevronRight,
   Shield,
   CreditCard,
-} from "lucide-react"
-import { DashboardHeader } from "@/components/dashboard-header"
-import { ManualApplicationForm } from "@/components/admin/manual-application-form"
-import { AdvancedFilters } from "@/components/admin/advanced-filters"
+} from "lucide-react";
+import { DashboardHeader } from "@/components/dashboard-header";
+import { ManualApplicationForm } from "@/components/admin/manual-application-form";
+import { AdvancedFilters } from "@/components/admin/advanced-filters";
 
 // Types
+interface CompanyListResponse {
+  response_code: number;
+  success: boolean;
+  status_code: number;
+  total_records: number;
+  page_number: number;
+  total_pages: number;
+  message: string;
+  result: CompanyDetails[];
+  analytics: {
+    totalCompanies: number;
+    pending: number;
+    under_review: number;
+    approved: number;
+    rejected: number;
+  };
+}
+
+interface CompanyDetails {
+  _id: string;
+  legal_company_name: string;
+  business_type: string;
+  website: string;
+  street_address: string;
+  city: string;
+  zip_postal_code: string;
+  country: string;
+  phone_number: string;
+  annual_revenue_range: string;
+  years_in_business: string;
+  avg_order_value: string;
+  monthly_transaction_volume: string;
+  primary_export_market: string;
+  major_client_buyers: string;
+  cash_flow_cyle: string;
+  no_of_employees: string;
+  employee_id: string;
+  action_type: number;
+  createdAt: string;
+  updatedAt: string;
+  status: string;
+  documents_status: string;
+  bank_statements?: string;
+  business_registration_certificate?: string;
+  financial_statements?: string;
+  tax_registration_documents?: string;
+  verification_image?: string;
+}
+
+interface SellerManagementResponse {
+  response_code: number;
+  success: boolean;
+  status_code: number;
+  message: string;
+  result: {
+    companies: Company[];
+    counts: {
+      readyForApproval: number;
+      inHold: number;
+      approved: number;
+    };
+    stats: {
+      totalCompaniesCount: number;
+      activeCompaniesCount: number;
+      totalInvoicesCount: number;
+      totalValue: number;
+    };
+  };
+}
+
+interface Company {
+  _id: string;
+  legal_company_name: string;
+  business_type: string;
+  website: string;
+  street_address: string;
+  city: string;
+  zip_postal_code: string;
+  country: string;
+  phone_number: string;
+  annual_revenue_range: string;
+  years_in_business: string;
+  avg_order_value: string;
+  monthly_transaction_volume: string;
+  primary_export_market: string;
+  major_client_buyers: string;
+  cash_flow_cyle: string;
+  no_of_employees: string;
+  employee_id: string;
+  action_type: number;
+  createdAt: string;
+  updatedAt: string;
+  bank_statements?: string;
+  business_registration_certificate?: string;
+  financial_statements?: string;
+  tax_registration_documents?: string;
+  verification_image?: string;
+}
+
+interface ApplicationDocument {
+  id: string;
+  applicationId: string;
+  documentType: string;
+  fileName: string;
+  fileSize: string;
+  uploadDate: string;
+  status: "pending" | "under_review" | "approved" | "rejected";
+  reviewedBy?: string;
+  reviewDate?: string;
+  notes?: string;
+  priority: "high" | "medium" | "low";
+  category: string;
+}
+
 interface SellerApplication {
-  id: string
-  companyName: string
-  contactPerson: string
-  title: string
-  email: string
-  phone: string
-  address: string
-  submissionDate: string
-  lastUpdated: string
-  status: "pending" | "under_review" | "approved" | "rejected"
-  priority: "high" | "medium" | "low"
-  businessType: string
-  industry: string
-  annualRevenue: number
-  yearsInBusiness: number
-  employeeCount: number
-  requestedLimit: number
-  completionScore: number
-  riskScore: number
-  creditRating: string
-  taxId: string
-  website: string
-  businessDescription: string
-  documentsComplete: number
-  totalDocuments: number
-  riskLevel: "low" | "medium" | "high"
-  source?: string
+  id: string;
+  companyName: string;
+  contactPerson: string;
+  title: string;
+  email: string;
+  phone: string;
+  address: string;
+  submissionDate: string;
+  lastUpdated: string;
+  status: "pending" | "under_review" | "approved" | "rejected";
+  priority: "high" | "medium" | "low";
+  businessType: string;
+  industry: string;
+  annualRevenue: number;
+  yearsInBusiness: number;
+  employeeCount: number;
+  requestedLimit: number;
+  completionScore: number;
+  riskScore: number;
+  creditRating: string;
+  taxId: string;
+  website: string;
+  businessDescription: string;
+  documentsComplete: number;
+  totalDocuments: number;
+  riskLevel: "low" | "medium" | "high";
+  source?: string;
   // Enhanced fields
-  averageOrderValue: number
-  monthlyTransactionVolume: number
-  primaryExportMarkets: string
-  majorClients: string
-  cashFlowCycle: string
-  numberOfEmployees: number
-  bankName: string
-  accountType: string
-  accountHolderName: string
-  accountNumber: string
-  routingNumber: string
-  swiftBicCode: string
-  ibanCode: string
-  primaryCurrency: string
-  bankAddress: string
-  documents: Document[]
+  averageOrderValue: number;
+  monthlyTransactionVolume: number;
+  primaryExportMarkets: string;
+  majorClients: string;
+  cashFlowCycle: string;
+  numberOfEmployees: number;
+  bankName: string;
+  accountType: string;
+  accountHolderName: string;
+  accountNumber: string;
+  routingNumber: string;
+  swiftBicCode: string;
+  ibanCode: string;
+  primaryCurrency: string;
+  bankAddress: string;
+  documents: ApplicationDocument[];
   // New fields for contracts and financing
-  contracts: Contract[]
-  financingRequests: FinancingRequest[]
+  contracts: Contract[];
+  financingRequests: FinancingRequest[];
 }
 
 interface Contract {
-  id: string
-  title: string
-  type: string
-  status: "active" | "expired" | "pending"
-  value: number
-  startDate: string
-  endDate: string
-  utilization: number
+  id: string;
+  title: string;
+  type: string;
+  status: "active" | "expired" | "pending";
+  value: number;
+  startDate: string;
+  endDate: string;
+  utilization: number;
 }
 
 interface FinancingRequest {
-  id: string
-  submissionDate: string
-  buyer: string
-  invoiceAmount: number
-  requestedAmount: number
-  currency: string
-  status: "pending" | "approved" | "under_review" | "completed" | "rejected"
-  priority: "high" | "medium" | "low"
+  id: string;
+  submissionDate: string;
+  buyer: string;
+  invoiceAmount: number;
+  requestedAmount: number;
+  currency: string;
+  status: "pending" | "approved" | "under_review" | "completed" | "rejected";
+  priority: "high" | "medium" | "low";
 }
 
 // Mock data with enhanced fields
@@ -368,7 +504,8 @@ const mockApplications: SellerApplication[] = [
     creditRating: "A",
     taxId: "11-2233445",
     website: "https://mfgplus.com",
-    businessDescription: "Manufacturing Plus LLC produces high-quality industrial equipment and machinery components.",
+    businessDescription:
+      "Manufacturing Plus LLC produces high-quality industrial equipment and machinery components.",
     documentsComplete: 5,
     totalDocuments: 5,
     riskLevel: "low",
@@ -429,79 +566,145 @@ const mockApplications: SellerApplication[] = [
       },
     ],
   },
-]
+];
 
 export default function UnifiedSellerManagementPage() {
-  const router = useRouter()
-  const [activeTab, setActiveTab] = useState("overview")
-  const [applications, setApplications] = useState<SellerApplication[]>(mockApplications)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
-  const [priorityFilter, setPriorityFilter] = useState("all")
-  const [riskFilter, setRiskFilter] = useState("all")
-  const [selectedItems, setSelectedItems] = useState<string[]>([])
-  const [expandedApplications, setExpandedApplications] = useState<string[]>([])
-  const [showManualForm, setShowManualForm] = useState(false)
-  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
-  const [advancedFilters, setAdvancedFilters] = useState({})
-  const [isExporting, setIsExporting] = useState(false)
+  const router = useRouter();
+  const isLoading = useSelector((state: any) => state.loading);
+  const [activeTab, setActiveTab] = useState("overview");
+  const [applications, setApplications] =
+    useState<SellerApplication[]>(mockApplications);
+  const [sellerData, setSellerData] = useState<SellerManagementResponse | null>(
+    null
+  );
+  const [companyListData, setCompanyListData] =
+    useState<CompanyListResponse | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Loading overlay component
+  const LoadingOverlay = () => (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+      <div className="bg-white rounded-lg p-6 flex flex-col items-center gap-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-red-600 border-t-transparent"></div>
+        <p className="text-lg font-medium">Loading...</p>
+      </div>
+    </div>
+  );
+
+  const fetchSellerManagementData = async () => {
+    try {
+      const response = await makeRequest<SellerManagementResponse>({
+        url: getSellerManagementPortalApiCall,
+        method: "GET",
+      });
+
+      if (response.data.success) {
+        setSellerData(response.data);
+      }
+    } catch (error) {
+      console.error("Error fetching seller management data:", error);
+    }
+  };
+
+  const fetchCompanyList = async () => {
+    try {
+      const response = await makeRequest<CompanyListResponse>({
+        url: getCompanyListApiCall,
+        method: "GET",
+        params: {
+          page: currentPage,
+          search: searchQuery,
+        },
+      });
+
+      if (response.data.success) {
+        setCompanyListData(response.data);
+      }
+    } catch (error) {
+      console.error("Error fetching company list:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchSellerManagementData();
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "applications") {
+      fetchCompanyList();
+    }
+  }, [activeTab, currentPage, searchQuery]);
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [priorityFilter, setPriorityFilter] = useState("all");
+  const [riskFilter, setRiskFilter] = useState("all");
+  const [selectedItems, setSelectedItems] = useState<string[]>([]);
+  const [expandedApplications, setExpandedApplications] = useState<string[]>(
+    []
+  );
+  const [showManualForm, setShowManualForm] = useState(false);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [advancedFilters, setAdvancedFilters] = useState({});
+  const [isExporting, setIsExporting] = useState(false);
 
   // Helper functions
   const getStatusColor = (status: string) => {
-    switch (status) {
+    switch (status.toLowerCase()) {
       case "pending":
-        return "bg-yellow-100 text-yellow-800 border-yellow-200"
+        return "bg-orange-100 text-orange-800 border-orange-200";
       case "under_review":
-        return "bg-blue-100 text-blue-800 border-blue-200"
+        return "bg-blue-100 text-blue-800 border-blue-200";
       case "approved":
-        return "bg-green-100 text-green-800 border-green-200"
+        return "bg-green-100 text-green-800 border-green-200";
       case "rejected":
-        return "bg-red-100 text-red-800 border-red-200"
+        return "bg-red-100 text-red-800 border-red-200";
       default:
-        return "bg-gray-100 text-gray-800 border-gray-200"
+        return "bg-gray-100 text-gray-800 border-gray-200";
     }
-  }
+  };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case "high":
-        return "bg-red-100 text-red-800 border-red-200"
+        return "bg-red-100 text-red-800 border-red-200";
       case "medium":
-        return "bg-yellow-100 text-yellow-800 border-yellow-200"
+        return "bg-yellow-100 text-yellow-800 border-yellow-200";
       case "low":
-        return "bg-green-100 text-green-800 border-green-200"
+        return "bg-green-100 text-green-800 border-green-200";
       default:
-        return "bg-gray-100 text-gray-800 border-gray-200"
+        return "bg-gray-100 text-gray-800 border-gray-200";
     }
-  }
+  };
 
   const getRiskColor = (level: string) => {
     switch (level.toLowerCase()) {
       case "low":
-        return "text-green-600"
+        return "text-green-600";
       case "medium":
-        return "text-yellow-600"
+        return "text-yellow-600";
       case "high":
-        return "text-red-600"
+        return "text-red-600";
       default:
-        return "text-gray-600"
+        return "text-gray-600";
     }
-  }
+  };
 
   const getStatusIcon = (status: string) => {
-    switch (status) {
+    switch (status.toLowerCase()) {
       case "pending":
-        return <Clock className="h-4 w-4" />
+        return <Clock className="h-4 w-4 text-orange-600" />;
       case "under_review":
-        return <Eye className="h-4 w-4" />
+        return <Eye className="h-4 w-4 text-blue-600" />;
       case "approved":
-        return <CheckCircle className="h-4 w-4" />
+        return <CheckCircle className="h-4 w-4 text-green-600" />;
       case "rejected":
-        return <XCircle className="h-4 w-4" />
+        return <XCircle className="h-4 w-4 text-red-600" />;
       default:
-        return <AlertTriangle className="h-4 w-4" />
+        return <AlertTriangle className="h-4 w-4 text-gray-600" />;
     }
-  }
+  };
 
   const formatCurrency = (amount: number, currency = "USD") => {
     return new Intl.NumberFormat("en-US", {
@@ -509,16 +712,16 @@ export default function UnifiedSellerManagementPage() {
       currency: currency,
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
-    }).format(amount)
-  }
+    }).format(amount);
+  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
       month: "short",
       day: "numeric",
-    })
-  }
+    });
+  };
 
   // Filter functions
   const filteredApplications = applications.filter((app) => {
@@ -526,50 +729,74 @@ export default function UnifiedSellerManagementPage() {
       app.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       app.contactPerson.toLowerCase().includes(searchTerm.toLowerCase()) ||
       app.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      app.id.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = statusFilter === "all" || app.status === statusFilter
-    const matchesPriority = priorityFilter === "all" || app.priority === priorityFilter
-    const matchesRisk = riskFilter === "all" || app.riskLevel === riskFilter
-    return matchesSearch && matchesStatus && matchesPriority && matchesRisk
-  })
+      app.id.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === "all" || app.status === statusFilter;
+    const matchesPriority =
+      priorityFilter === "all" || app.priority === priorityFilter;
+    const matchesRisk = riskFilter === "all" || app.riskLevel === riskFilter;
+    return matchesSearch && matchesStatus && matchesPriority && matchesRisk;
+  });
 
   // Statistics
   const applicationStats = {
     total: applications.length,
     pending: applications.filter((app) => app.status === "pending").length,
-    underReview: applications.filter((app) => app.status === "under_review").length,
+    underReview: applications.filter((app) => app.status === "under_review")
+      .length,
     approved: applications.filter((app) => app.status === "approved").length,
     rejected: applications.filter((app) => app.status === "rejected").length,
     highRisk: applications.filter((app) => app.riskLevel === "high").length,
-    readyForApproval: applications.filter((app) => app.completionScore >= 90 && app.status === "pending").length,
-    totalContracts: applications.reduce((acc, app) => acc + app.contracts.length, 0),
+    readyForApproval: applications.filter(
+      (app) => app.completionScore >= 90 && app.status === "pending"
+    ).length,
+    totalContracts: applications.reduce(
+      (acc, app) => acc + app.contracts.length,
+      0
+    ),
     activeContracts: applications.reduce(
-      (acc, app) => acc + app.contracts.filter((c) => c.status === "active").length,
-      0,
+      (acc, app) =>
+        acc + app.contracts.filter((c) => c.status === "active").length,
+      0
     ),
-    totalFinancingRequests: applications.reduce((acc, app) => acc + app.financingRequests.length, 0),
+    totalFinancingRequests: applications.reduce(
+      (acc, app) => acc + app.financingRequests.length,
+      0
+    ),
     totalFinancingValue: applications.reduce(
-      (acc, app) => acc + app.financingRequests.reduce((sum, req) => sum + req.requestedAmount, 0),
-      0,
+      (acc, app) =>
+        acc +
+        app.financingRequests.reduce(
+          (sum, req) => sum + req.requestedAmount,
+          0
+        ),
+      0
     ),
-  }
+  };
 
   const documentStats = {
     total: applications.reduce((acc, app) => acc + app.documents.length, 0),
-    pending: applications.reduce((acc, app) => acc + app.documents.filter((doc) => doc.status === "pending").length, 0),
+    pending: applications.reduce(
+      (acc, app) =>
+        acc + app.documents.filter((doc) => doc.status === "pending").length,
+      0
+    ),
     approved: applications.reduce(
-      (acc, app) => acc + app.documents.filter((doc) => doc.status === "approved").length,
-      0,
+      (acc, app) =>
+        acc + app.documents.filter((doc) => doc.status === "approved").length,
+      0
     ),
     rejected: applications.reduce(
-      (acc, app) => acc + app.documents.filter((doc) => doc.status === "rejected").length,
-      0,
+      (acc, app) =>
+        acc + app.documents.filter((doc) => doc.status === "rejected").length,
+      0
     ),
     underReview: applications.reduce(
-      (acc, app) => acc + app.documents.filter((doc) => doc.status === "under_review").length,
-      0,
+      (acc, app) =>
+        acc +
+        app.documents.filter((doc) => doc.status === "under_review").length,
+      0
     ),
-  }
+  };
 
   // Action handlers
   const handleManualApplicationSubmit = (applicationData: any) => {
@@ -578,20 +805,20 @@ export default function UnifiedSellerManagementPage() {
       documents: [],
       contracts: [],
       financingRequests: [],
-    }
-    setApplications((prev) => [newApplication, ...prev])
-  }
+    };
+    setApplications((prev) => [newApplication, ...prev]);
+  };
 
   const handleAdvancedFiltersApply = (filters: any) => {
-    setAdvancedFilters(filters)
+    setAdvancedFilters(filters);
     // Apply advanced filters logic here
-  }
+  };
 
   const handleExportData = async () => {
-    setIsExporting(true)
+    setIsExporting(true);
 
     // Simulate export process
-    await new Promise((resolve) => setTimeout(resolve, 2000))
+    await new Promise((resolve) => setTimeout(resolve, 2000));
 
     // Create CSV data
     const csvData = filteredApplications.map((app) => ({
@@ -617,36 +844,49 @@ export default function UnifiedSellerManagementPage() {
       "Primary Currency": app.primaryCurrency,
       "Submission Date": formatDate(app.submissionDate),
       "Last Updated": formatDate(app.lastUpdated),
-    }))
+    }));
 
     // Convert to CSV
-    const headers = Object.keys(csvData[0] || {})
+    const headers = Object.keys(csvData[0] || {});
     const csvContent = [
       headers.join(","),
-      ...csvData.map((row) => headers.map((header) => `"${row[header as keyof typeof row]}"`).join(",")),
-    ].join("\n")
+      ...csvData.map((row) =>
+        headers
+          .map((header) => `"${row[header as keyof typeof row]}"`)
+          .join(",")
+      ),
+    ].join("\n");
 
     // Download CSV
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
-    const link = document.createElement("a")
-    const url = URL.createObjectURL(blob)
-    link.setAttribute("href", url)
-    link.setAttribute("download", `seller-applications-${new Date().toISOString().split("T")[0]}.csv`)
-    link.style.visibility = "hidden"
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute(
+      "download",
+      `seller-applications-${new Date().toISOString().split("T")[0]}.csv`
+    );
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 
-    setIsExporting(false)
-  }
+    setIsExporting(false);
+  };
 
   const toggleApplicationExpansion = (applicationId: string) => {
     setExpandedApplications((prev) =>
-      prev.includes(applicationId) ? prev.filter((id) => id !== applicationId) : [...prev, applicationId],
-    )
-  }
+      prev.includes(applicationId)
+        ? prev.filter((id) => id !== applicationId)
+        : [...prev, applicationId]
+    );
+  };
 
-  const handleApplicationAction = (applicationId: string, action: "approve" | "reject", notes?: string) => {
+  const handleApplicationAction = (
+    applicationId: string,
+    action: "approve" | "reject",
+    notes?: string
+  ) => {
     setApplications((prev) =>
       prev.map((app) =>
         app.id === applicationId
@@ -655,16 +895,16 @@ export default function UnifiedSellerManagementPage() {
               status: action === "approve" ? "approved" : "rejected",
               lastUpdated: new Date().toISOString(),
             }
-          : app,
-      ),
-    )
-  }
+          : app
+      )
+    );
+  };
 
   const handleDocumentAction = (
     applicationId: string,
     documentId: string,
     action: "approve" | "reject",
-    notes?: string,
+    notes?: string
   ) => {
     setApplications((prev) =>
       prev.map((app) =>
@@ -680,99 +920,122 @@ export default function UnifiedSellerManagementPage() {
                       reviewDate: new Date().toISOString(),
                       notes: notes || doc.notes,
                     }
-                  : doc,
+                  : doc
               ),
               documentsComplete: app.documents.filter((doc) =>
-                doc.id === documentId ? action === "approve" : doc.status === "approved",
+                doc.id === documentId
+                  ? action === "approve"
+                  : doc.status === "approved"
               ).length,
             }
-          : app,
-      ),
-    )
-  }
+          : app
+      )
+    );
+  };
 
   const headerActions = (
     <div className="flex gap-3">
-      <Button variant="outline" className="gap-2 bg-transparent" onClick={handleExportData} disabled={isExporting}>
+      <Button
+        variant="outline"
+        className="gap-2 bg-transparent"
+        onClick={handleExportData}
+        disabled={isExporting}
+      >
         <Download className="h-4 w-4" />
         {isExporting ? "Exporting..." : "Export Data"}
       </Button>
-      <Button variant="outline" className="gap-2 bg-transparent" onClick={() => setShowAdvancedFilters(true)}>
+      <Button
+        variant="outline"
+        className="gap-2 bg-transparent"
+        onClick={() => setShowAdvancedFilters(true)}
+      >
         <Filter className="h-4 w-4" />
         Advanced Filters
       </Button>
-      <Button className="gap-2 bg-red-600 hover:bg-red-700" onClick={() => router.push("/admin/sellers/create")}>
+      <Button
+        className="gap-2 bg-red-600 hover:bg-red-700"
+        onClick={() => router.push("/admin/sellers/create")}
+      >
         <Plus className="h-4 w-4" />
         Create Application
       </Button>
     </div>
-  )
+  );
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+      {isLoading && <LoadingOverlay />}
       <DashboardHeader title="Seller Management" actions={headerActions} />
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="space-y-6"
+      >
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="applications">Applications & Approval</TabsTrigger>
+          <TabsTrigger value="applications">
+            Applications & Approval
+          </TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-6">
           {/* Overall Statistics */}
-          <div className="grid grid-cols-1 md:grid-cols-6 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Applications</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Total Applications
+                </CardTitle>
                 <Building2 className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{applicationStats.total}</div>
+                <div className="text-2xl font-bold">
+                  {sellerData?.result.stats.totalCompaniesCount || 0}
+                </div>
                 <p className="text-xs text-muted-foreground">
-                  <span className="text-green-600">+{applicationStats.pending}</span> pending review
+                  Total registered companies
                 </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Active Contracts</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Active Companies
+                </CardTitle>
                 <FileText className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{applicationStats.activeContracts}</div>
-                <p className="text-xs text-muted-foreground">{applicationStats.totalContracts} total contracts</p>
+                <div className="text-2xl font-bold">
+                  {sellerData?.result.stats.activeCompaniesCount || 0}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Currently active companies
+                </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Financing Requests</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Total Invoices
+                </CardTitle>
                 <CreditCard className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{applicationStats.totalFinancingRequests}</div>
+                <div className="text-2xl font-bold">
+                  {sellerData?.result.stats.totalInvoicesCount || 0}
+                </div>
                 <p className="text-xs text-muted-foreground">
-                  {formatCurrency(applicationStats.totalFinancingValue)} total value
+                  {formatCurrency(sellerData?.result.stats.totalValue || 0)}{" "}
+                  total value
                 </p>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Documents</CardTitle>
-                <FileText className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{documentStats.total}</div>
-                <p className="text-xs text-muted-foreground">
-                  <span className="text-yellow-600">{documentStats.pending}</span> awaiting review
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
+            {/* <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Approval Rate</CardTitle>
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
@@ -785,9 +1048,9 @@ export default function UnifiedSellerManagementPage() {
                   {applicationStats.approved} of {applicationStats.total} approved
                 </p>
               </CardContent>
-            </Card>
+            </Card> */}
 
-            <Card>
+            {/* <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">High Risk</CardTitle>
                 <AlertTriangle className="h-4 w-4 text-muted-foreground" />
@@ -796,7 +1059,7 @@ export default function UnifiedSellerManagementPage() {
                 <div className="text-2xl font-bold text-red-600">{applicationStats.highRisk}</div>
                 <p className="text-xs text-muted-foreground">Require special attention</p>
               </CardContent>
-            </Card>
+            </Card> */}
           </div>
 
           {/* Quick Actions */}
@@ -809,8 +1072,10 @@ export default function UnifiedSellerManagementPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-green-700 mb-2">{applicationStats.readyForApproval}</div>
-                <p className="text-sm text-green-600">Applications with 90%+ completion</p>
+                <div className="text-3xl font-bold text-green-700 mb-2">
+                  {sellerData?.result.counts.readyForApproval || 0}
+                </div>
+                <p className="text-sm text-green-600">Ready for approval</p>
                 <Button
                   className="mt-3 bg-green-600 hover:bg-green-700"
                   size="sm"
@@ -829,17 +1094,19 @@ export default function UnifiedSellerManagementPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-yellow-700 mb-2">{applicationStats.highRisk}</div>
-                <p className="text-sm text-yellow-600">High-risk applications</p>
+                <div className="text-3xl font-bold text-yellow-700 mb-2">
+                  {sellerData?.result.counts.inHold || 0}
+                </div>
+                <p className="text-sm text-yellow-600">Companies in hold</p>
                 <Button
                   className="mt-3 bg-yellow-600 hover:bg-yellow-700"
                   size="sm"
                   onClick={() => {
-                    setRiskFilter("high")
-                    setActiveTab("applications")
+                    setRiskFilter("high");
+                    setActiveTab("applications");
                   }}
                 >
-                  Review Risk
+                  Review Now
                 </Button>
               </CardContent>
             </Card>
@@ -848,21 +1115,25 @@ export default function UnifiedSellerManagementPage() {
               <CardHeader>
                 <CardTitle className="text-blue-800 flex items-center gap-2">
                   <Clock className="h-5 w-5" />
-                  Pending Review
+                  Approved Companies
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-blue-700 mb-2">{applicationStats.pending}</div>
-                <p className="text-sm text-blue-600">Total pending applications</p>
+                <div className="text-3xl font-bold text-blue-700 mb-2">
+                  {sellerData?.result.counts.approved || 0}
+                </div>
+                <p className="text-sm text-blue-600">
+                  Total approved companies
+                </p>
                 <Button
                   className="mt-3 bg-blue-600 hover:bg-blue-700"
                   size="sm"
                   onClick={() => {
-                    setStatusFilter("pending")
-                    setActiveTab("applications")
+                    setStatusFilter("approved");
+                    setActiveTab("applications");
                   }}
                 >
-                  Start Review
+                  View All
                 </Button>
               </CardContent>
             </Card>
@@ -873,21 +1144,35 @@ export default function UnifiedSellerManagementPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Recent Applications</CardTitle>
-                <CardDescription>Latest seller applications submitted</CardDescription>
+                <CardDescription>
+                  Latest seller applications submitted
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {applications.slice(0, 5).map((app) => (
-                    <div key={app.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  {sellerData?.result.companies.slice(0, 5).map((company) => (
+                    <div
+                      key={company._id}
+                      className="flex items-center justify-between p-3 border rounded-lg"
+                    >
                       <div className="flex items-center gap-3">
                         <Building2 className="h-8 w-8 p-2 bg-red-100 text-red-600 rounded-lg" />
                         <div>
-                          <p className="font-medium">{app.companyName}</p>
-                          <p className="text-sm text-muted-foreground">{formatDate(app.submissionDate)}</p>
+                          <p className="font-medium">
+                            {company.legal_company_name}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {formatDate(company.createdAt)}
+                          </p>
                         </div>
                       </div>
-                      <Badge variant="outline" className={getStatusColor(app.status)}>
-                        {app.status.replace("_", " ")}
+                      <Badge
+                        variant="outline"
+                        className={getStatusColor(
+                          company.action_type === 1 ? "approved" : "pending"
+                        )}
+                      >
+                        {company.action_type === 1 ? "Approved" : "Pending"}
                       </Badge>
                     </div>
                   ))}
@@ -898,24 +1183,39 @@ export default function UnifiedSellerManagementPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Document Review Queue</CardTitle>
-                <CardDescription>Documents pending verification</CardDescription>
+                <CardDescription>
+                  Documents pending verification
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   {applications
-                    .flatMap((app) => app.documents.map((doc) => ({ ...doc, companyName: app.companyName })))
+                    .flatMap((app) =>
+                      app.documents.map((doc: ApplicationDocument) => ({
+                        ...doc,
+                        companyName: app.companyName,
+                      }))
+                    )
                     .filter((doc) => doc.status === "pending")
                     .slice(0, 5)
                     .map((doc) => (
-                      <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div
+                        key={doc.id}
+                        className="flex items-center justify-between p-3 border rounded-lg"
+                      >
                         <div className="flex items-center gap-3">
                           <FileText className="h-8 w-8 p-2 bg-yellow-100 text-yellow-600 rounded-lg" />
                           <div>
                             <p className="font-medium">{doc.documentType}</p>
-                            <p className="text-sm text-muted-foreground">{doc.companyName}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {doc.companyName}
+                            </p>
                           </div>
                         </div>
-                        <Badge variant="outline" className={getPriorityColor(doc.priority)}>
+                        <Badge
+                          variant="outline"
+                          className={getPriorityColor(doc.priority)}
+                        >
                           {doc.priority}
                         </Badge>
                       </div>
@@ -934,8 +1234,12 @@ export default function UnifiedSellerManagementPage() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Total</p>
-                    <p className="text-2xl font-bold">{applicationStats.total}</p>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Total
+                    </p>
+                    <p className="text-2xl font-bold">
+                      {companyListData?.analytics.totalCompanies || 0}
+                    </p>
                   </div>
                   <FileText className="h-8 w-8 text-muted-foreground" />
                 </div>
@@ -945,8 +1249,12 @@ export default function UnifiedSellerManagementPage() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Pending</p>
-                    <p className="text-2xl font-bold text-yellow-600">{applicationStats.pending}</p>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Pending
+                    </p>
+                    <p className="text-2xl font-bold text-yellow-600">
+                      {companyListData?.analytics.pending || 0}
+                    </p>
                   </div>
                   <Clock className="h-8 w-8 text-yellow-600" />
                 </div>
@@ -956,8 +1264,12 @@ export default function UnifiedSellerManagementPage() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Under Review</p>
-                    <p className="text-2xl font-bold text-blue-600">{applicationStats.underReview}</p>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Under Review
+                    </p>
+                    <p className="text-2xl font-bold text-blue-600">
+                      {companyListData?.analytics.under_review || 0}
+                    </p>
                   </div>
                   <Eye className="h-8 w-8 text-blue-600" />
                 </div>
@@ -967,8 +1279,12 @@ export default function UnifiedSellerManagementPage() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Approved</p>
-                    <p className="text-2xl font-bold text-green-600">{applicationStats.approved}</p>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Approved
+                    </p>
+                    <p className="text-2xl font-bold text-green-600">
+                      {companyListData?.analytics.approved || 0}
+                    </p>
                   </div>
                   <CheckCircle className="h-8 w-8 text-green-600" />
                 </div>
@@ -978,8 +1294,12 @@ export default function UnifiedSellerManagementPage() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Rejected</p>
-                    <p className="text-2xl font-bold text-red-600">{applicationStats.rejected}</p>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Rejected
+                    </p>
+                    <p className="text-2xl font-bold text-red-600">
+                      {companyListData?.analytics.rejected || 0}
+                    </p>
                   </div>
                   <XCircle className="h-8 w-8 text-red-600" />
                 </div>
@@ -996,8 +1316,11 @@ export default function UnifiedSellerManagementPage() {
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       placeholder="Search applications..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
+                      value={searchQuery}
+                      onChange={(e) => {
+                        setSearchQuery(e.target.value);
+                        setCurrentPage(1); // Reset to first page on search
+                      }}
                       className="pl-10"
                     />
                   </div>
@@ -1015,7 +1338,10 @@ export default function UnifiedSellerManagementPage() {
                       <SelectItem value="rejected">Rejected</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                  {/* <Select
+                    value={priorityFilter}
+                    onValueChange={setPriorityFilter}
+                  >
                     <SelectTrigger className="w-40">
                       <SelectValue placeholder="Priority" />
                     </SelectTrigger>
@@ -1036,7 +1362,7 @@ export default function UnifiedSellerManagementPage() {
                       <SelectItem value="medium">Medium</SelectItem>
                       <SelectItem value="high">High</SelectItem>
                     </SelectContent>
-                  </Select>
+                  </Select> */}
                 </div>
               </div>
             </CardContent>
@@ -1045,422 +1371,339 @@ export default function UnifiedSellerManagementPage() {
           {/* Applications List with Embedded Documents */}
           <Card>
             <CardHeader>
-              <CardTitle>Applications ({filteredApplications.length})</CardTitle>
-              <CardDescription>Click on an application to view and manage its documents</CardDescription>
+              <CardTitle>
+                Applications ({filteredApplications.length})
+              </CardTitle>
+              <CardDescription>
+                Click on an application to view and manage its documents
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {filteredApplications.map((application) => (
-                  <Collapsible
-                    key={application.id}
-                    open={expandedApplications.includes(application.id)}
-                    onOpenChange={() => toggleApplicationExpansion(application.id)}
-                  >
-                    <div className="border rounded-lg">
-                      <CollapsibleTrigger asChild>
-                        <div className="p-6 hover:bg-muted/50 cursor-pointer">
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-start gap-4 flex-1">
-                              <div className="flex items-center">
-                                {expandedApplications.includes(application.id) ? (
-                                  <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                                ) : (
-                                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                                )}
-                              </div>
+                {/* Pagination */}
+                <div className="flex justify-between items-center mb-4">
+                  <p className="text-sm text-muted-foreground">
+                    Showing {(currentPage - 1) * 10 + 1} to{" "}
+                    {Math.min(
+                      currentPage * 10,
+                      companyListData?.total_records || 0
+                    )}{" "}
+                    of {companyListData?.total_records || 0} entries
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setCurrentPage((prev) => Math.max(1, prev - 1))
+                      }
+                      disabled={currentPage === 1}
+                    >
+                      Previous
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage((prev) => prev + 1)}
+                      disabled={
+                        currentPage === (companyListData?.total_pages || 1)
+                      }
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
 
-                              <div className="flex-1">
-                                <div className="flex items-center gap-3 mb-3">
-                                  <h3 className="text-lg font-semibold text-gray-900">{application.companyName}</h3>
-                                  <Badge variant="outline" className={getStatusColor(application.status)}>
-                                    <div className="flex items-center gap-1">
-                                      {getStatusIcon(application.status)}
-                                      {application.status.replace("_", " ")}
-                                    </div>
-                                  </Badge>
-                                  <Badge variant="outline" className={getPriorityColor(application.priority)}>
-                                    {application.priority === "high" && <Star className="h-3 w-3 mr-1" />}
-                                    {application.priority}
-                                  </Badge>
-                                  <Badge
-                                    variant="outline"
-                                    className={`${getRiskColor(application.riskLevel)} border-current`}
-                                  >
-                                    <Shield className="h-3 w-3 mr-1" />
-                                    {application.riskLevel} risk
-                                  </Badge>
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-                                  <div>
-                                    <span className="text-sm text-muted-foreground">Contact:</span>
-                                    <div className="font-medium">{application.contactPerson}</div>
-                                    <div className="text-sm text-muted-foreground">{application.email}</div>
-                                  </div>
-                                  <div>
-                                    <span className="text-sm text-muted-foreground">Business:</span>
-                                    <div className="font-medium">{application.businessType}</div>
-                                    <div className="text-sm text-muted-foreground">{application.industry}</div>
-                                  </div>
-                                  <div>
-                                    <span className="text-sm text-muted-foreground">Revenue:</span>
-                                    <div className="font-medium">{formatCurrency(application.annualRevenue)}</div>
-                                    <div className="text-sm text-muted-foreground">
-                                      {application.yearsInBusiness} years
-                                    </div>
-                                  </div>
-                                  <div>
-                                    <span className="text-sm text-muted-foreground">Requested:</span>
-                                    <div className="font-medium">{formatCurrency(application.requestedLimit)}</div>
-                                    <div className="text-sm text-muted-foreground">Credit limit</div>
-                                  </div>
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                  <div>
-                                    <div className="flex items-center justify-between text-sm mb-1">
-                                      <span className="text-muted-foreground">Completion</span>
-                                      <span className="font-medium">{application.completionScore}%</span>
-                                    </div>
-                                    <Progress value={application.completionScore} className="h-2" />
-                                  </div>
-                                  <div>
-                                    <div className="flex items-center justify-between text-sm mb-1">
-                                      <span className="text-muted-foreground">Risk Score</span>
-                                      <span className="font-medium">{application.riskScore}/100</span>
-                                    </div>
-                                    <Progress
-                                      value={application.riskScore}
-                                      className={`h-2 ${
-                                        application.riskScore >= 70
-                                          ? "[&>div]:bg-green-500"
-                                          : application.riskScore >= 50
-                                            ? "[&>div]:bg-yellow-500"
-                                            : "[&>div]:bg-red-500"
-                                      }`}
-                                    />
-                                  </div>
-                                  <div>
-                                    <div className="flex items-center justify-between text-sm mb-1">
-                                      <span className="text-muted-foreground">Documents</span>
-                                      <span className="font-medium">
-                                        {application.documentsComplete}/{application.totalDocuments}
-                                      </span>
-                                    </div>
-                                    <Progress
-                                      value={(application.documentsComplete / application.totalDocuments) * 100}
-                                      className="h-2"
-                                    />
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center gap-2 ml-6">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  router.push(`/admin/sellers/applications/${application.id}`)
-                                }}
-                                className="bg-transparent"
-                              >
-                                <Eye className="h-4 w-4 mr-1" />
-                                Details
-                              </Button>
-
-                              {(application.status === "pending" || application.status === "under_review") && (
-                                <>
-                                  <Button
-                                    size="sm"
-                                    className="bg-green-600 hover:bg-green-700"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      handleApplicationAction(application.id, "approve")
-                                    }}
-                                  >
-                                    <CheckCircle className="h-4 w-4 mr-1" />
-                                    Approve
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="destructive"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      handleApplicationAction(application.id, "reject")
-                                    }}
-                                  >
-                                    <XCircle className="h-4 w-4 mr-1" />
-                                    Reject
-                                  </Button>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </CollapsibleTrigger>
-
-                      <CollapsibleContent>
-                        <div className="border-t bg-muted/20 p-6">
-                          {/* Enhanced Financial Information */}
-                          <div className="mb-6">
-                            <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                              <TrendingUp className="h-4 w-4" />
-                              Enhanced Financial & Operations Information
-                            </h4>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                              <div className="space-y-3">
-                                <h5 className="font-medium text-gray-800">Financial Metrics</h5>
-                                <div className="space-y-2 text-sm">
-                                  <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Average Order Value:</span>
-                                    <span className="font-medium">{formatCurrency(application.averageOrderValue)}</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Monthly Volume:</span>
-                                    <span className="font-medium">
-                                      {formatCurrency(application.monthlyTransactionVolume)}
-                                    </span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Cash Flow Cycle:</span>
-                                    <span className="font-medium">{application.cashFlowCycle} days</span>
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="space-y-3">
-                                <h5 className="font-medium text-gray-800">Market Presence</h5>
-                                <div className="space-y-2 text-sm">
-                                  <div>
-                                    <span className="text-muted-foreground">Export Markets:</span>
-                                    <p className="font-medium mt-1">{application.primaryExportMarkets}</p>
-                                  </div>
-                                  <div>
-                                    <span className="text-muted-foreground">Major Clients:</span>
-                                    <p className="font-medium mt-1">{application.majorClients}</p>
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="space-y-3">
-                                <h5 className="font-medium text-gray-800">Banking Information</h5>
-                                <div className="space-y-2 text-sm">
-                                  <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Bank:</span>
-                                    <span className="font-medium">{application.bankName}</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Account Type:</span>
-                                    <span className="font-medium">{application.accountType.replace("_", " ")}</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Currency:</span>
-                                    <span className="font-medium">{application.primaryCurrency}</span>
-                                  </div>
-                                  {application.swiftBicCode && (
-                                    <div className="flex justify-between">
-                                      <span className="text-muted-foreground">SWIFT/BIC:</span>
-                                      <span className="font-medium">{application.swiftBicCode}</span>
-                                    </div>
+                {companyListData?.result
+                  .filter((company) => {
+                    // Local filtering
+                    const matchesStatus =
+                      statusFilter === "all" ||
+                      company.status.toLowerCase() === statusFilter;
+                    const matchesPriority = priorityFilter === "all"; // Add priority filter if needed
+                    const matchesRisk = riskFilter === "all"; // Add risk filter if needed
+                    return matchesStatus && matchesPriority && matchesRisk;
+                  })
+                  .map((company) => (
+                    <Collapsible
+                      key={company._id}
+                      open={expandedApplications.includes(company._id)}
+                      onOpenChange={() =>
+                        toggleApplicationExpansion(company._id)
+                      }
+                    >
+                      <div className="border rounded-lg">
+                        <CollapsibleTrigger asChild>
+                          <div className="p-6 hover:bg-muted/50 cursor-pointer">
+                            <div className="flex items-start justify-between">
+                              <div className="flex items-start gap-4 flex-1">
+                                <div className="flex items-center">
+                                  {expandedApplications.includes(
+                                    company._id
+                                  ) ? (
+                                    <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                                  ) : (
+                                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
                                   )}
                                 </div>
-                              </div>
-                            </div>
-                          </div>
 
-                          {/* Contracts & Financing Overview */}
-                          <div className="mb-6">
-                            <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                              <FileText className="h-4 w-4" />
-                              Contracts & Financing Overview
-                            </h4>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                              <div className="space-y-3">
-                                <h5 className="font-medium text-gray-800">
-                                  Active Contracts ({application.contracts.filter((c) => c.status === "active").length})
-                                </h5>
-                                {application.contracts.length > 0 ? (
-                                  <div className="space-y-2">
-                                    {application.contracts.slice(0, 3).map((contract) => (
-                                      <div
-                                        key={contract.id}
-                                        className="flex justify-between items-center p-2 bg-white border rounded text-sm"
+                                <div className="flex-1">
+                                  <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
+                                    <h3 className="text-lg font-semibold text-gray-900 truncate">
+                                      {company.legal_company_name}
+                                    </h3>
+                                    <div className="flex flex-wrap gap-2">
+                                      <Badge
+                                        variant="outline"
+                                        className={getStatusColor(
+                                          company.status
+                                        )}
                                       >
-                                        <div>
-                                          <p className="font-medium">{contract.title}</p>
-                                          <p className="text-muted-foreground">{contract.type}</p>
+                                        <div className="flex items-center gap-1">
+                                          {getStatusIcon(company.status)}
+                                          {company.status}
                                         </div>
-                                        <div className="text-right">
-                                          <p className="font-medium">{formatCurrency(contract.value)}</p>
-                                          <Badge className={`text-xs ${getStatusColor(contract.status)}`}>
-                                            {contract.status}
-                                          </Badge>
-                                        </div>
-                                      </div>
-                                    ))}
-                                    {application.contracts.length > 3 && (
-                                      <p className="text-sm text-muted-foreground">
-                                        +{application.contracts.length - 3} more contracts
-                                      </p>
-                                    )}
-                                  </div>
-                                ) : (
-                                  <p className="text-sm text-muted-foreground">No contracts found</p>
-                                )}
-                              </div>
-                              <div className="space-y-3">
-                                <h5 className="font-medium text-gray-800">
-                                  Recent Financing Requests ({application.financingRequests.length})
-                                </h5>
-                                {application.financingRequests.length > 0 ? (
-                                  <div className="space-y-2">
-                                    {application.financingRequests.slice(0, 3).map((request) => (
-                                      <div
-                                        key={request.id}
-                                        className="flex justify-between items-center p-2 bg-white border rounded text-sm"
+                                      </Badge>
+                                      <Badge
+                                        variant="outline"
+                                        className={getPriorityColor("medium")}
                                       >
-                                        <div>
-                                          <p className="font-medium">{request.buyer}</p>
-                                          <p className="text-muted-foreground">{formatDate(request.submissionDate)}</p>
-                                        </div>
-                                        <div className="text-right">
-                                          <p className="font-medium">
-                                            {formatCurrency(request.requestedAmount, request.currency)}
-                                          </p>
-                                          <Badge className={`text-xs ${getStatusColor(request.status)}`}>
-                                            {request.status.replace("_", " ")}
-                                          </Badge>
-                                        </div>
-                                      </div>
-                                    ))}
-                                    {application.financingRequests.length > 3 && (
-                                      <p className="text-sm text-muted-foreground">
-                                        +{application.financingRequests.length - 3} more requests
-                                      </p>
-                                    )}
-                                  </div>
-                                ) : (
-                                  <p className="text-sm text-muted-foreground">No financing requests found</p>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="mb-4">
-                            <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                              <FileText className="h-4 w-4" />
-                              Documents ({application.documents.length})
-                            </h4>
-                          </div>
-
-                          {application.documents.length > 0 ? (
-                            <div className="space-y-3">
-                              {application.documents.map((document) => (
-                                <div key={document.id} className="bg-white border rounded-lg p-4">
-                                  <div className="flex items-start justify-between">
-                                    <div className="flex-1">
-                                      <div className="flex items-center gap-3 mb-2">
-                                        <h5 className="font-medium text-gray-900">{document.documentType}</h5>
-                                        <Badge className={`text-xs ${getStatusColor(document.status)}`}>
-                                          {document.status.replace("_", " ").toUpperCase()}
-                                        </Badge>
-                                        <Badge className={`text-xs ${getPriorityColor(document.priority)}`}>
-                                          {document.priority.toUpperCase()}
-                                        </Badge>
-                                      </div>
-
-                                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                                        <div>
-                                          <span className="text-muted-foreground">File:</span>
-                                          <div className="font-medium">{document.fileName}</div>
-                                        </div>
-                                        <div>
-                                          <span className="text-muted-foreground">Size:</span>
-                                          <div className="font-medium">{document.fileSize}</div>
-                                        </div>
-                                        <div>
-                                          <span className="text-muted-foreground">Uploaded:</span>
-                                          <div className="font-medium">{formatDate(document.uploadDate)}</div>
-                                        </div>
-                                      </div>
-
-                                      {document.reviewedBy && (
-                                        <div className="mt-2 text-sm">
-                                          <span className="text-muted-foreground">Reviewed by:</span>
-                                          <span className="font-medium ml-1">{document.reviewedBy}</span>
-                                          {document.reviewDate && (
-                                            <span className="text-muted-foreground ml-2">
-                                              on {formatDate(document.reviewDate)}
-                                            </span>
-                                          )}
-                                        </div>
-                                      )}
-
-                                      {document.notes && (
-                                        <div className="mt-2 p-2 bg-muted rounded text-sm">
-                                          <span className="text-muted-foreground font-medium">Notes:</span>
-                                          <div className="mt-1">{document.notes}</div>
-                                        </div>
-                                      )}
+                                        Documents: {company.documents_status}
+                                      </Badge>
                                     </div>
+                                  </div>
 
-                                    <div className="flex items-center gap-2">
-                                      <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">
-                                        <Eye className="h-4 w-4" />
-                                      </Button>
-                                      <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-700">
-                                        <Download className="h-4 w-4" />
-                                      </Button>
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                                    <div className="space-y-1">
+                                      <span className="text-sm font-medium text-muted-foreground">
+                                        Contact
+                                      </span>
+                                      <div className="font-medium truncate">
+                                        {company.phone_number}
+                                      </div>
+                                      <div className="text-sm text-muted-foreground truncate">
+                                        {company.website}
+                                      </div>
+                                    </div>
+                                    <div className="space-y-1">
+                                      <span className="text-sm font-medium text-muted-foreground">
+                                        Business
+                                      </span>
+                                      <div className="font-medium capitalize">
+                                        {company.business_type}
+                                      </div>
+                                      <div className="text-sm text-muted-foreground">
+                                        {company.no_of_employees} employees
+                                      </div>
+                                    </div>
+                                    <div className="space-y-1">
+                                      <span className="text-sm font-medium text-muted-foreground">
+                                        Revenue
+                                      </span>
+                                      <div className="font-medium">
+                                        {company.annual_revenue_range}
+                                      </div>
+                                      <div className="text-sm text-muted-foreground">
+                                        {company.years_in_business} years
+                                      </div>
+                                    </div>
+                                    <div className="space-y-1">
+                                      <span className="text-sm font-medium text-muted-foreground">
+                                        Location
+                                      </span>
+                                      <div className="font-medium">
+                                        {company.city}
+                                      </div>
+                                      <div className="text-sm text-muted-foreground">
+                                        {company.country.toUpperCase()}
+                                      </div>
+                                    </div>
+                                  </div>
 
-                                      {document.status === "pending" && (
-                                        <>
-                                          <Button
-                                            size="sm"
-                                            className="bg-green-600 hover:bg-green-700"
-                                            onClick={() => handleDocumentAction(application.id, document.id, "approve")}
-                                          >
-                                            <CheckCircle className="h-4 w-4 mr-1" />
-                                            Approve
-                                          </Button>
-                                          <Button
-                                            size="sm"
-                                            variant="destructive"
-                                            onClick={() =>
-                                              handleDocumentAction(
-                                                application.id,
-                                                document.id,
-                                                "reject",
-                                                "Requires review",
-                                              )
-                                            }
-                                          >
-                                            <XCircle className="h-4 w-4 mr-1" />
-                                            Reject
-                                          </Button>
-                                        </>
-                                      )}
+                                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 p-4 bg-muted/5 rounded-lg">
+                                    <div className="flex flex-col items-center text-center p-3 bg-white rounded-md shadow-sm">
+                                      <span className="text-sm text-muted-foreground mb-1">
+                                        Average Order
+                                      </span>
+                                      <span className="text-lg font-semibold text-gray-900">
+                                        $
+                                        {Number(
+                                          company.avg_order_value
+                                        ).toLocaleString()}
+                                      </span>
+                                    </div>
+                                    <div className="flex flex-col items-center text-center p-3 bg-white rounded-md shadow-sm">
+                                      <span className="text-sm text-muted-foreground mb-1">
+                                        Monthly Volume
+                                      </span>
+                                      <span className="text-lg font-semibold text-gray-900">
+                                        $
+                                        {Number(
+                                          company.monthly_transaction_volume
+                                        ).toLocaleString()}
+                                      </span>
+                                    </div>
+                                    <div className="flex flex-col items-center text-center p-3 bg-white rounded-md shadow-sm">
+                                      <span className="text-sm text-muted-foreground mb-1">
+                                        Cash Flow Cycle
+                                      </span>
+                                      <span className="text-lg font-semibold text-gray-900">
+                                        {company.cash_flow_cyle} Days
+                                      </span>
                                     </div>
                                   </div>
                                 </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <div className="text-center py-8 text-muted-foreground">
-                              <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                              <p>No documents uploaded yet</p>
-                            </div>
-                          )}
-                        </div>
-                      </CollapsibleContent>
-                    </div>
-                  </Collapsible>
-                ))}
+                              </div>
 
-                {filteredApplications.length === 0 && (
+                              <div className="flex flex-col gap-2 ml-6">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    router.push(
+                                      `/admin/sellers/applications/${company._id}`
+                                    );
+                                  }}
+                                  className="bg-transparent w-24"
+                                >
+                                  <Eye className="h-4 w-4 mr-1" />
+                                  Details
+                                </Button>
+
+                                {company.status === "Pending" && (
+                                  <>
+                                    <Button
+                                      size="sm"
+                                      className="bg-green-600 hover:bg-green-700 w-24"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleApplicationAction(
+                                          company._id,
+                                          "approve"
+                                        );
+                                      }}
+                                    >
+                                      <CheckCircle className="h-4 w-4 mr-1" />
+                                      Approve
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="destructive"
+                                      className="w-24"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleApplicationAction(
+                                          company._id,
+                                          "reject"
+                                        );
+                                      }}
+                                    >
+                                      <XCircle className="h-4 w-4 mr-1" />
+                                      Reject
+                                    </Button>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </CollapsibleTrigger>
+
+                        <CollapsibleContent>
+                          <div className="border-t bg-muted/20 p-6">
+                            {/* Documents */}
+                            <div className="mb-4">
+                              <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                                <FileText className="h-4 w-4" />
+                                Documents
+                              </h4>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {company.bank_statements && (
+                                  <div className="p-3 border rounded-lg">
+                                    <h5 className="font-medium">
+                                      Bank Statements
+                                    </h5>
+                                    <div className="flex justify-between items-center mt-2">
+                                      <span className="text-sm text-muted-foreground">
+                                        {company.bank_statements
+                                          .split("/")
+                                          .pop()}
+                                      </span>
+                                      <Button variant="ghost" size="sm">
+                                        <Download className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                )}
+                                {company.business_registration_certificate && (
+                                  <div className="p-3 border rounded-lg">
+                                    <h5 className="font-medium">
+                                      Business Registration
+                                    </h5>
+                                    <div className="flex justify-between items-center mt-2">
+                                      <span className="text-sm text-muted-foreground">
+                                        {company.business_registration_certificate
+                                          .split("/")
+                                          .pop()}
+                                      </span>
+                                      <Button variant="ghost" size="sm">
+                                        <Download className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                )}
+                                {company.financial_statements && (
+                                  <div className="p-3 border rounded-lg">
+                                    <h5 className="font-medium">
+                                      Financial Statements
+                                    </h5>
+                                    <div className="flex justify-between items-center mt-2">
+                                      <span className="text-sm text-muted-foreground">
+                                        {company.financial_statements
+                                          .split("/")
+                                          .pop()}
+                                      </span>
+                                      <Button variant="ghost" size="sm">
+                                        <Download className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                )}
+                                {company.tax_registration_documents && (
+                                  <div className="p-3 border rounded-lg">
+                                    <h5 className="font-medium">
+                                      Tax Registration
+                                    </h5>
+                                    <div className="flex justify-between items-center mt-2">
+                                      <span className="text-sm text-muted-foreground">
+                                        {company.tax_registration_documents
+                                          .split("/")
+                                          .pop()}
+                                      </span>
+                                      <Button variant="ghost" size="sm">
+                                        <Download className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </CollapsibleContent>
+                      </div>
+                    </Collapsible>
+                  ))}
+
+                {(!companyListData?.result ||
+                  companyListData.result.length === 0) && (
                   <div className="text-center py-12">
                     <Building2 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No applications found</h3>
-                    <p className="text-gray-600">Try adjusting your search criteria or filters</p>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                      No companies found
+                    </h3>
+                    <p className="text-gray-600">
+                      Try adjusting your search criteria or filters
+                    </p>
                   </div>
                 )}
               </div>
@@ -1483,5 +1726,5 @@ export default function UnifiedSellerManagementPage() {
         activeFilters={advancedFilters}
       />
     </div>
-  )
+  );
 }
