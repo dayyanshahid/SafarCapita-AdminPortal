@@ -1,8 +1,14 @@
-"use client"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
+"use client";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import {
   Users,
   FileText,
@@ -15,8 +21,8 @@ import {
   ArrowUpRight,
   Eye,
   Download,
-} from "lucide-react"
-import { DashboardHeader } from "@/components/dashboard-header"
+} from "lucide-react";
+import { DashboardHeader } from "@/components/dashboard-header";
 
 export default function AdminDashboard() {
   // Mock data for admin dashboard
@@ -86,7 +92,7 @@ export default function AdminDashboard() {
         timestamp: "2024-01-15T09:30:00Z",
       },
     ],
-  }
+  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
@@ -94,8 +100,8 @@ export default function AdminDashboard() {
       currency: "USD",
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
-    }).format(amount)
-  }
+    }).format(amount);
+  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -103,63 +109,63 @@ export default function AdminDashboard() {
       day: "numeric",
       hour: "2-digit",
       minute: "2-digit",
-    })
-  }
+    });
+  };
 
   const getActivityIcon = (type: string) => {
     switch (type) {
       case "seller_application":
-        return <Users className="h-4 w-4" />
+        return <Users className="h-4 w-4" />;
       case "financing_request":
-        return <DollarSign className="h-4 w-4" />
+        return <DollarSign className="h-4 w-4" />;
       case "document_verification":
-        return <FileText className="h-4 w-4" />
+        return <FileText className="h-4 w-4" />;
       case "risk_assessment":
-        return <AlertTriangle className="h-4 w-4" />
+        return <AlertTriangle className="h-4 w-4" />;
       default:
-        return <Activity className="h-4 w-4" />
+        return <Activity className="h-4 w-4" />;
     }
-  }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case "pending":
-        return "bg-yellow-100 text-yellow-800"
+        return "bg-yellow-100 text-yellow-800";
       case "approved":
       case "completed":
-        return "bg-green-100 text-green-800"
+        return "bg-green-100 text-green-800";
       case "flagged":
-        return "bg-red-100 text-red-800"
+        return "bg-red-100 text-red-800";
       default:
-        return "bg-gray-100 text-gray-800"
+        return "bg-gray-100 text-gray-800";
     }
-  }
+  };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case "high":
-        return "bg-red-100 text-red-800"
+        return "bg-red-100 text-red-800";
       case "medium":
-        return "bg-yellow-100 text-yellow-800"
+        return "bg-yellow-100 text-yellow-800";
       case "low":
-        return "bg-green-100 text-green-800"
+        return "bg-green-100 text-green-800";
       default:
-        return "bg-gray-100 text-gray-800"
+        return "bg-gray-100 text-gray-800";
     }
-  }
+  };
 
   const getAlertIcon = (type: string) => {
     switch (type) {
       case "error":
-        return <AlertTriangle className="h-4 w-4 text-red-600" />
+        return <AlertTriangle className="h-4 w-4 text-red-600" />;
       case "warning":
-        return <AlertTriangle className="h-4 w-4 text-yellow-600" />
+        return <AlertTriangle className="h-4 w-4 text-yellow-600" />;
       case "info":
-        return <Bell className="h-4 w-4 text-blue-600" />
+        return <Bell className="h-4 w-4 text-blue-600" />;
       default:
-        return <Bell className="h-4 w-4" />
+        return <Bell className="h-4 w-4" />;
     }
-  }
+  };
 
   const headerActions = (
     <div className="flex gap-3">
@@ -172,7 +178,7 @@ export default function AdminDashboard() {
         System Logs
       </Button>
     </div>
-  )
+  );
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
@@ -180,10 +186,12 @@ export default function AdminDashboard() {
 
       <div className="space-y-6">
         {/* System Health & Key Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Sellers</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Total Sellers
+              </CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -197,11 +205,15 @@ export default function AdminDashboard() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Financing Volume</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Financing Volume
+              </CardTitle>
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatCurrency(mockData.totalFinancingVolume)}</div>
+              <div className="text-2xl font-bold">
+                {formatCurrency(mockData.totalFinancingVolume)}
+              </div>
               <p className="text-xs text-muted-foreground flex items-center mt-1">
                 <ArrowUpRight className="h-3 w-3 mr-1 text-green-600" />
                 <span className="text-green-600">+15%</span> from last month
@@ -211,16 +223,22 @@ export default function AdminDashboard() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending Applications</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Pending Applications
+              </CardTitle>
               <Clock className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{mockData.pendingApplications}</div>
-              <p className="text-xs text-muted-foreground">Requires attention</p>
+              <div className="text-2xl font-bold">
+                {mockData.pendingApplications}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Requires attention
+              </p>
             </CardContent>
           </Card>
 
-          <Card>
+          {/* <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">System Health</CardTitle>
               <Activity className="h-4 w-4 text-muted-foreground" />
@@ -229,7 +247,7 @@ export default function AdminDashboard() {
               <div className="text-2xl font-bold">{mockData.systemHealth}%</div>
               <Progress value={mockData.systemHealth} className="mt-2" />
             </CardContent>
-          </Card>
+          </Card> */}
         </div>
 
         {/* Processing Metrics */}
@@ -240,27 +258,39 @@ export default function AdminDashboard() {
                 <TrendingUp className="h-5 w-5" />
                 Processing Overview
               </CardTitle>
-              <CardDescription>Current status of financing requests and applications</CardDescription>
+              <CardDescription>
+                Current status of financing requests and applications
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="text-center p-4 border rounded-lg">
-                  <div className="text-2xl font-bold text-green-600">{mockData.approvedRequests}</div>
+                  <div className="text-2xl font-bold text-green-600">
+                    {mockData.approvedRequests}
+                  </div>
                   <p className="text-sm text-muted-foreground">Approved</p>
                 </div>
                 <div className="text-center p-4 border rounded-lg">
-                  <div className="text-2xl font-bold text-yellow-600">{mockData.pendingRequests}</div>
+                  <div className="text-2xl font-bold text-yellow-600">
+                    {mockData.pendingRequests}
+                  </div>
                   <p className="text-sm text-muted-foreground">Pending</p>
                 </div>
                 <div className="text-center p-4 border rounded-lg">
-                  <div className="text-2xl font-bold text-red-600">{mockData.rejectedRequests}</div>
+                  <div className="text-2xl font-bold text-red-600">
+                    {mockData.rejectedRequests}
+                  </div>
                   <p className="text-sm text-muted-foreground">Rejected</p>
                 </div>
               </div>
               <div className="mt-4 pt-4 border-t">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">Average Processing Time</span>
-                  <span className="text-sm font-bold">{mockData.averageProcessingTime} days</span>
+                  <span className="text-sm font-medium">
+                    Average Processing Time
+                  </span>
+                  <span className="text-sm font-bold">
+                    {mockData.averageProcessingTime} days
+                  </span>
                 </div>
               </div>
             </CardContent>
@@ -275,11 +305,16 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent className="space-y-3">
               {mockData.systemAlerts.map((alert) => (
-                <div key={alert.id} className="flex items-start gap-3 p-3 border rounded-lg">
+                <div
+                  key={alert.id}
+                  className="flex items-start gap-3 p-3 border rounded-lg"
+                >
                   {getAlertIcon(alert.type)}
                   <div className="flex-1">
                     <p className="text-sm font-medium">{alert.message}</p>
-                    <p className="text-xs text-muted-foreground">{formatDate(alert.timestamp)}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatDate(alert.timestamp)}
+                    </p>
                   </div>
                 </div>
               ))}
@@ -294,7 +329,9 @@ export default function AdminDashboard() {
               <Activity className="h-5 w-5" />
               Recent Activity
             </CardTitle>
-            <CardDescription>Latest system activities and administrative actions</CardDescription>
+            <CardDescription>
+              Latest system activities and administrative actions
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -309,12 +346,18 @@ export default function AdminDashboard() {
                     </div>
                     <div>
                       <p className="font-medium">{activity.description}</p>
-                      <p className="text-sm text-muted-foreground">{formatDate(activity.timestamp)}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {formatDate(activity.timestamp)}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge className={getPriorityColor(activity.priority)}>{activity.priority}</Badge>
-                    <Badge className={getStatusColor(activity.status)}>{activity.status}</Badge>
+                    <Badge className={getPriorityColor(activity.priority)}>
+                      {activity.priority}
+                    </Badge>
+                    <Badge className={getStatusColor(activity.status)}>
+                      {activity.status}
+                    </Badge>
                   </div>
                 </div>
               ))}
@@ -323,5 +366,5 @@ export default function AdminDashboard() {
         </Card>
       </div>
     </div>
-  )
+  );
 }

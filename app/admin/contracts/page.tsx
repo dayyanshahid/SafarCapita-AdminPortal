@@ -1,16 +1,35 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Textarea } from "@/components/ui/textarea"
-import { Checkbox } from "@/components/ui/checkbox"
+import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -19,8 +38,8 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogFooter,
-} from "@/components/ui/dialog"
-import { Progress } from "@/components/ui/progress"
+} from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
 import {
   FileText,
   Plus,
@@ -34,7 +53,7 @@ import {
   DollarSign,
   Send,
   AlertTriangle,
-} from "lucide-react"
+} from "lucide-react";
 
 // Mock data for contracts
 const contractsData = [
@@ -53,7 +72,11 @@ const contractsData = [
     documents: [
       { name: "Master Agreement", status: "signed", uploadDate: "2024-01-15" },
       { name: "KYC Documents", status: "verified", uploadDate: "2024-01-10" },
-      { name: "Financial Statements", status: "approved", uploadDate: "2024-01-12" },
+      {
+        name: "Financial Statements",
+        status: "approved",
+        uploadDate: "2024-01-12",
+      },
     ],
     terms: {
       advanceRate: 85,
@@ -79,7 +102,11 @@ const contractsData = [
     riskLevel: "medium",
     utilization: 0,
     documents: [
-      { name: "Factoring Agreement", status: "pending_signature", uploadDate: "2024-01-18" },
+      {
+        name: "Factoring Agreement",
+        status: "pending_signature",
+        uploadDate: "2024-01-18",
+      },
       { name: "UCC Filing", status: "draft", uploadDate: "2024-01-18" },
     ],
     terms: {
@@ -106,8 +133,16 @@ const contractsData = [
     riskLevel: "high",
     utilization: 90,
     documents: [
-      { name: "Supply Chain Agreement", status: "expired", uploadDate: "2023-06-01" },
-      { name: "Supplier Agreements", status: "expired", uploadDate: "2023-06-01" },
+      {
+        name: "Supply Chain Agreement",
+        status: "expired",
+        uploadDate: "2023-06-01",
+      },
+      {
+        name: "Supplier Agreements",
+        status: "expired",
+        uploadDate: "2023-06-01",
+      },
     ],
     terms: {
       advanceRate: 75,
@@ -120,14 +155,15 @@ const contractsData = [
     createdBy: "Admin User",
     notes: "Contract expired, renewal under discussion",
   },
-]
+];
 
 // Mock data for templates
 const templatesData = [
   {
     id: "TPL-001",
     name: "Standard Trade Finance Agreement",
-    description: "Comprehensive trade finance agreement for established businesses",
+    description:
+      "Comprehensive trade finance agreement for established businesses",
     category: "Trade Finance",
     version: "2.1",
     lastModified: "2024-01-10",
@@ -145,11 +181,36 @@ TERMS AND CONDITIONS:
 
 [Additional terms and conditions...]`,
     fields: [
-      { name: "CLIENT_NAME", label: "Client Name", type: "text", required: true },
-      { name: "CREDIT_LIMIT", label: "Credit Limit", type: "number", required: true },
-      { name: "ADVANCE_RATE", label: "Advance Rate (%)", type: "number", required: true },
-      { name: "FACTOR_FEE", label: "Factor Fee (%)", type: "number", required: true },
-      { name: "TERM_LENGTH", label: "Term Length (days)", type: "number", required: true },
+      {
+        name: "CLIENT_NAME",
+        label: "Client Name",
+        type: "text",
+        required: true,
+      },
+      {
+        name: "CREDIT_LIMIT",
+        label: "Credit Limit",
+        type: "number",
+        required: true,
+      },
+      {
+        name: "ADVANCE_RATE",
+        label: "Advance Rate (%)",
+        type: "number",
+        required: true,
+      },
+      {
+        name: "FACTOR_FEE",
+        label: "Factor Fee (%)",
+        type: "number",
+        required: true,
+      },
+      {
+        name: "TERM_LENGTH",
+        label: "Term Length (days)",
+        type: "number",
+        required: true,
+      },
     ],
   },
   {
@@ -173,11 +234,36 @@ FACTORING TERMS:
 
 [Additional factoring terms...]`,
     fields: [
-      { name: "CLIENT_NAME", label: "Client Name", type: "text", required: true },
-      { name: "ADVANCE_RATE", label: "Advance Rate (%)", type: "number", required: true },
-      { name: "FACTOR_FEE", label: "Factor Fee (%)", type: "number", required: true },
-      { name: "MINIMUM_FEE", label: "Minimum Fee ($)", type: "number", required: true },
-      { name: "CREDIT_LIMIT", label: "Credit Limit ($)", type: "number", required: true },
+      {
+        name: "CLIENT_NAME",
+        label: "Client Name",
+        type: "text",
+        required: true,
+      },
+      {
+        name: "ADVANCE_RATE",
+        label: "Advance Rate (%)",
+        type: "number",
+        required: true,
+      },
+      {
+        name: "FACTOR_FEE",
+        label: "Factor Fee (%)",
+        type: "number",
+        required: true,
+      },
+      {
+        name: "MINIMUM_FEE",
+        label: "Minimum Fee ($)",
+        type: "number",
+        required: true,
+      },
+      {
+        name: "CREDIT_LIMIT",
+        label: "Credit Limit ($)",
+        type: "number",
+        required: true,
+      },
     ],
   },
   {
@@ -201,25 +287,50 @@ SUPPLY CHAIN TERMS:
 
 [Supply chain specific terms...]`,
     fields: [
-      { name: "CLIENT_NAME", label: "Client Name", type: "text", required: true },
-      { name: "CREDIT_LIMIT", label: "Credit Limit ($)", type: "number", required: true },
-      { name: "ADVANCE_RATE", label: "Advance Rate (%)", type: "number", required: true },
-      { name: "FACTOR_FEE", label: "Discount Rate (%)", type: "number", required: true },
-      { name: "TERM_LENGTH", label: "Payment Terms (days)", type: "number", required: true },
+      {
+        name: "CLIENT_NAME",
+        label: "Client Name",
+        type: "text",
+        required: true,
+      },
+      {
+        name: "CREDIT_LIMIT",
+        label: "Credit Limit ($)",
+        type: "number",
+        required: true,
+      },
+      {
+        name: "ADVANCE_RATE",
+        label: "Advance Rate (%)",
+        type: "number",
+        required: true,
+      },
+      {
+        name: "FACTOR_FEE",
+        label: "Discount Rate (%)",
+        type: "number",
+        required: true,
+      },
+      {
+        name: "TERM_LENGTH",
+        label: "Payment Terms (days)",
+        type: "number",
+        required: true,
+      },
     ],
   },
-]
+];
 
 export default function ContractManagementPage() {
-  const [selectedContract, setSelectedContract] = useState<any>(null)
-  const [selectedTemplate, setSelectedTemplate] = useState<any>(null)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
-  const [isNewContractOpen, setIsNewContractOpen] = useState(false)
-  const [isNewTemplateOpen, setIsNewTemplateOpen] = useState(false)
-  const [isGenerateContractOpen, setIsGenerateContractOpen] = useState(false)
-  const [contractFormData, setContractFormData] = useState<any>({})
-  const [templateFormData, setTemplateFormData] = useState<any>({})
+  const [selectedContract, setSelectedContract] = useState<any>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [isNewContractOpen, setIsNewContractOpen] = useState(false);
+  const [isNewTemplateOpen, setIsNewTemplateOpen] = useState(false);
+  const [isGenerateContractOpen, setIsGenerateContractOpen] = useState(false);
+  const [contractFormData, setContractFormData] = useState<any>({});
+  const [templateFormData, setTemplateFormData] = useState<any>({});
 
   const getStatusBadge = (status: string) => {
     const variants = {
@@ -228,70 +339,77 @@ export default function ContractManagementPage() {
       expired: "bg-red-100 text-red-800",
       draft: "bg-gray-100 text-gray-800",
       terminated: "bg-red-100 text-red-800",
-    }
-    return variants[status as keyof typeof variants] || variants.draft
-  }
+    };
+    return variants[status as keyof typeof variants] || variants.draft;
+  };
 
   const getRiskBadge = (risk: string) => {
     const variants = {
       low: "bg-green-100 text-green-800",
       medium: "bg-yellow-100 text-yellow-800",
       high: "bg-red-100 text-red-800",
-    }
-    return variants[risk as keyof typeof variants] || variants.low
-  }
+    };
+    return variants[risk as keyof typeof variants] || variants.low;
+  };
 
   const getDocumentStatusIcon = (status: string) => {
     switch (status) {
       case "signed":
       case "verified":
       case "approved":
-        return <CheckCircle className="h-4 w-4 text-green-600" />
+        return <CheckCircle className="h-4 w-4 text-green-600" />;
       case "pending_signature":
       case "pending":
-        return <Clock className="h-4 w-4 text-yellow-600" />
+        return <Clock className="h-4 w-4 text-yellow-600" />;
       case "draft":
-        return <FileText className="h-4 w-4 text-blue-600" />
+        return <FileText className="h-4 w-4 text-blue-600" />;
       case "expired":
       case "rejected":
-        return <AlertTriangle className="h-4 w-4 text-red-600" />
+        return <AlertTriangle className="h-4 w-4 text-red-600" />;
       default:
-        return <FileText className="h-4 w-4 text-gray-600" />
+        return <FileText className="h-4 w-4 text-gray-600" />;
     }
-  }
+  };
 
   const filteredContracts = contractsData.filter((contract) => {
     const matchesSearch =
       contract.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       contract.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      contract.id.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = statusFilter === "all" || contract.status === statusFilter
-    return matchesSearch && matchesStatus
-  })
+      contract.id.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus =
+      statusFilter === "all" || contract.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
   const handleCreateContract = () => {
-    console.log("Creating contract:", contractFormData)
-    setIsNewContractOpen(false)
-    setContractFormData({})
+    console.log("Creating contract:", contractFormData);
+    setIsNewContractOpen(false);
+    setContractFormData({});
     // Here you would typically make an API call to create the contract
-  }
+  };
 
   const handleGenerateContract = () => {
-    console.log("Generating contract from template:", selectedTemplate, templateFormData)
-    setIsGenerateContractOpen(false)
-    setTemplateFormData({})
+    console.log(
+      "Generating contract from template:",
+      selectedTemplate,
+      templateFormData
+    );
+    setIsGenerateContractOpen(false);
+    setTemplateFormData({});
     // Here you would generate the contract from the template
-  }
+  };
 
   const handleSendForSignature = (contractId: string) => {
-    console.log("Sending contract for signature:", contractId)
+    console.log("Sending contract for signature:", contractId);
     // Here you would integrate with DocuSign or similar service
-  }
+  };
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       <div className="flex items-center justify-between space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight">Contract Management</h2>
+        <h2 className="text-3xl font-bold tracking-tight">
+          Contract Management
+        </h2>
         <div className="flex items-center space-x-2">
           <Button onClick={() => setIsNewContractOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
@@ -313,48 +431,68 @@ export default function ContractManagementPage() {
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Contracts</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Total Contracts
+                </CardTitle>
                 <FileText className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{contractsData.length}</div>
                 <p className="text-xs text-muted-foreground">
-                  {contractsData.filter((c) => c.status === "active").length} active
+                  {contractsData.filter((c) => c.status === "active").length}{" "}
+                  active
                 </p>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Value</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Total Value
+                </CardTitle>
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  ${contractsData.reduce((sum, c) => sum + c.value, 0).toLocaleString()}
+                  $
+                  {contractsData
+                    .reduce((sum, c) => sum + c.value, 0)
+                    .toLocaleString()}
                 </div>
                 <p className="text-xs text-muted-foreground">Portfolio value</p>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Pending Signatures</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Pending Signatures
+                </CardTitle>
                 <Clock className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {contractsData.filter((c) => c.status === "pending_signature").length}
+                  {
+                    contractsData.filter(
+                      (c) => c.status === "pending_signature"
+                    ).length
+                  }
                 </div>
-                <p className="text-xs text-muted-foreground">Awaiting execution</p>
+                <p className="text-xs text-muted-foreground">
+                  Awaiting execution
+                </p>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Success Rate
+                </CardTitle>
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">94.2%</div>
-                <p className="text-xs text-muted-foreground">Contract execution rate</p>
+                <p className="text-xs text-muted-foreground">
+                  Contract execution rate
+                </p>
               </CardContent>
             </Card>
           </div>
@@ -377,7 +515,9 @@ export default function ContractManagementPage() {
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="pending_signature">Pending Signature</SelectItem>
+                <SelectItem value="pending_signature">
+                  Pending Signature
+                </SelectItem>
                 <SelectItem value="expired">Expired</SelectItem>
                 <SelectItem value="draft">Draft</SelectItem>
               </SelectContent>
@@ -406,20 +546,29 @@ export default function ContractManagementPage() {
                     <TableCell>
                       <div>
                         <div className="font-medium">{contract.client}</div>
-                        <div className="text-sm text-muted-foreground">{contract.clientEmail}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {contract.clientEmail}
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell>{contract.type}</TableCell>
                     <TableCell>
-                      <Badge className={getStatusBadge(contract.status)}>{contract.status.replace("_", " ")}</Badge>
+                      <Badge className={getStatusBadge(contract.status)}>
+                        {contract.status.replace("_", " ")}
+                      </Badge>
                     </TableCell>
                     <TableCell>${contract.value.toLocaleString()}</TableCell>
                     <TableCell>
-                      <Badge className={getRiskBadge(contract.riskLevel)}>{contract.riskLevel}</Badge>
+                      <Badge className={getRiskBadge(contract.riskLevel)}>
+                        {contract.riskLevel}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center space-x-2">
-                        <Progress value={contract.utilization} className="w-16" />
+                        <Progress
+                          value={contract.utilization}
+                          className="w-16"
+                        />
                         <span className="text-sm">{contract.utilization}%</span>
                       </div>
                     </TableCell>
@@ -427,54 +576,83 @@ export default function ContractManagementPage() {
                       <div className="flex items-center space-x-2">
                         <Dialog>
                           <DialogTrigger asChild>
-                            <Button variant="ghost" size="sm" onClick={() => setSelectedContract(contract)}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setSelectedContract(contract)}
+                            >
                               <Eye className="h-4 w-4" />
                             </Button>
                           </DialogTrigger>
                           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                             <DialogHeader>
-                              <DialogTitle>{selectedContract?.title}</DialogTitle>
-                              <DialogDescription>Contract ID: {selectedContract?.id}</DialogDescription>
+                              <DialogTitle>
+                                {selectedContract?.title}
+                              </DialogTitle>
+                              <DialogDescription>
+                                Contract ID: {selectedContract?.id}
+                              </DialogDescription>
                             </DialogHeader>
                             {selectedContract && (
                               <div className="space-y-6">
                                 {/* Contract Overview */}
                                 <div className="grid grid-cols-2 gap-6">
                                   <div className="space-y-4">
-                                    <h4 className="font-semibold">Client Information</h4>
+                                    <h4 className="font-semibold">
+                                      Client Information
+                                    </h4>
                                     <div className="space-y-2 text-sm">
                                       <p>
-                                        <strong>Client:</strong> {selectedContract.client}
+                                        <strong>Client:</strong>{" "}
+                                        {selectedContract.client}
                                       </p>
                                       <p>
-                                        <strong>Email:</strong> {selectedContract.clientEmail}
+                                        <strong>Email:</strong>{" "}
+                                        {selectedContract.clientEmail}
                                       </p>
                                       <p>
-                                        <strong>Type:</strong> {selectedContract.type}
+                                        <strong>Type:</strong>{" "}
+                                        {selectedContract.type}
                                       </p>
                                       <p>
                                         <strong>Status:</strong>{" "}
-                                        <Badge className={getStatusBadge(selectedContract.status)}>
-                                          {selectedContract.status.replace("_", " ")}
+                                        <Badge
+                                          className={getStatusBadge(
+                                            selectedContract.status
+                                          )}
+                                        >
+                                          {selectedContract.status.replace(
+                                            "_",
+                                            " "
+                                          )}
                                         </Badge>
                                       </p>
                                     </div>
                                   </div>
                                   <div className="space-y-4">
-                                    <h4 className="font-semibold">Contract Details</h4>
+                                    <h4 className="font-semibold">
+                                      Contract Details
+                                    </h4>
                                     <div className="space-y-2 text-sm">
                                       <p>
-                                        <strong>Value:</strong> ${selectedContract.value.toLocaleString()}
+                                        <strong>Value:</strong> $
+                                        {selectedContract.value.toLocaleString()}
                                       </p>
                                       <p>
-                                        <strong>Start Date:</strong> {selectedContract.startDate}
+                                        <strong>Start Date:</strong>{" "}
+                                        {selectedContract.startDate}
                                       </p>
                                       <p>
-                                        <strong>End Date:</strong> {selectedContract.endDate}
+                                        <strong>End Date:</strong>{" "}
+                                        {selectedContract.endDate}
                                       </p>
                                       <p>
                                         <strong>Risk Level:</strong>{" "}
-                                        <Badge className={getRiskBadge(selectedContract.riskLevel)}>
+                                        <Badge
+                                          className={getRiskBadge(
+                                            selectedContract.riskLevel
+                                          )}
+                                        >
                                           {selectedContract.riskLevel}
                                         </Badge>
                                       </p>
@@ -484,10 +662,14 @@ export default function ContractManagementPage() {
 
                                 {/* Contract Terms */}
                                 <div className="space-y-4">
-                                  <h4 className="font-semibold">Contract Terms</h4>
+                                  <h4 className="font-semibold">
+                                    Contract Terms
+                                  </h4>
                                   <div className="grid grid-cols-3 gap-4">
                                     <div className="p-4 border rounded-lg">
-                                      <p className="font-medium">Advance Rate</p>
+                                      <p className="font-medium">
+                                        Advance Rate
+                                      </p>
                                       <p className="text-2xl font-bold text-blue-600">
                                         {selectedContract.terms.advanceRate}%
                                       </p>
@@ -499,9 +681,12 @@ export default function ContractManagementPage() {
                                       </p>
                                     </div>
                                     <div className="p-4 border rounded-lg">
-                                      <p className="font-medium">Credit Limit</p>
+                                      <p className="font-medium">
+                                        Credit Limit
+                                      </p>
                                       <p className="text-2xl font-bold text-purple-600">
-                                        ${selectedContract.terms.creditLimit.toLocaleString()}
+                                        $
+                                        {selectedContract.terms.creditLimit.toLocaleString()}
                                       </p>
                                     </div>
                                   </div>
@@ -511,43 +696,54 @@ export default function ContractManagementPage() {
                                 <div className="space-y-4">
                                   <h4 className="font-semibold">Documents</h4>
                                   <div className="space-y-2">
-                                    {selectedContract.documents.map((doc: any, index: number) => (
-                                      <div
-                                        key={index}
-                                        className="flex items-center justify-between p-3 border rounded-lg"
-                                      >
-                                        <div className="flex items-center gap-3">
-                                          {getDocumentStatusIcon(doc.status)}
-                                          <div>
-                                            <p className="font-medium">{doc.name}</p>
-                                            <p className="text-sm text-muted-foreground">
-                                              {doc.status} • {doc.uploadDate}
-                                            </p>
+                                    {selectedContract.documents.map(
+                                      (doc: any, index: number) => (
+                                        <div
+                                          key={index}
+                                          className="flex items-center justify-between p-3 border rounded-lg"
+                                        >
+                                          <div className="flex items-center gap-3">
+                                            {getDocumentStatusIcon(doc.status)}
+                                            <div>
+                                              <p className="font-medium">
+                                                {doc.name}
+                                              </p>
+                                              <p className="text-sm text-muted-foreground">
+                                                {doc.status} • {doc.uploadDate}
+                                              </p>
+                                            </div>
+                                          </div>
+                                          <div className="flex items-center gap-2">
+                                            <Button variant="outline" size="sm">
+                                              <Download className="h-4 w-4" />
+                                            </Button>
+                                            {doc.status ===
+                                              "pending_signature" && (
+                                              <Button
+                                                size="sm"
+                                                onClick={() =>
+                                                  handleSendForSignature(
+                                                    selectedContract.id
+                                                  )
+                                                }
+                                              >
+                                                <Send className="h-4 w-4 mr-1" />
+                                                Send
+                                              </Button>
+                                            )}
                                           </div>
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                          <Button variant="outline" size="sm">
-                                            <Download className="h-4 w-4" />
-                                          </Button>
-                                          {doc.status === "pending_signature" && (
-                                            <Button
-                                              size="sm"
-                                              onClick={() => handleSendForSignature(selectedContract.id)}
-                                            >
-                                              <Send className="h-4 w-4 mr-1" />
-                                              Send
-                                            </Button>
-                                          )}
-                                        </div>
-                                      </div>
-                                    ))}
+                                      )
+                                    )}
                                   </div>
                                 </div>
 
                                 {/* Notes */}
                                 <div className="space-y-4">
                                   <h4 className="font-semibold">Notes</h4>
-                                  <p className="text-sm text-muted-foreground">{selectedContract.notes}</p>
+                                  <p className="text-sm text-muted-foreground">
+                                    {selectedContract.notes}
+                                  </p>
                                 </div>
                               </div>
                             )}
@@ -560,7 +756,10 @@ export default function ContractManagementPage() {
                           <Download className="h-4 w-4" />
                         </Button>
                         {contract.status === "pending_signature" && (
-                          <Button size="sm" onClick={() => handleSendForSignature(contract.id)}>
+                          <Button
+                            size="sm"
+                            onClick={() => handleSendForSignature(contract.id)}
+                          >
                             <Send className="h-4 w-4" />
                           </Button>
                         )}
@@ -585,14 +784,21 @@ export default function ContractManagementPage() {
 
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {templatesData.map((template) => (
-              <Card key={template.id} className="hover:shadow-md transition-shadow">
+              <Card
+                key={template.id}
+                className="hover:shadow-md transition-shadow"
+              >
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div>
                       <CardTitle className="text-lg">{template.name}</CardTitle>
-                      <CardDescription className="mt-1">{template.description}</CardDescription>
+                      <CardDescription className="mt-1">
+                        {template.description}
+                      </CardDescription>
                     </div>
-                    <Badge className={getStatusBadge(template.status)}>{template.status}</Badge>
+                    <Badge className={getStatusBadge(template.status)}>
+                      {template.status}
+                    </Badge>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -607,16 +813,24 @@ export default function ContractManagementPage() {
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Usage:</span>
-                      <span className="font-medium">{template.usage} contracts</span>
+                      <span className="font-medium">
+                        {template.usage} contracts
+                      </span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Modified:</span>
-                      <span className="font-medium">{template.lastModified}</span>
+                      <span className="font-medium">
+                        {template.lastModified}
+                      </span>
                     </div>
                     <div className="flex gap-2 pt-2">
                       <Dialog>
                         <DialogTrigger asChild>
-                          <Button variant="outline" size="sm" className="flex-1 bg-transparent">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1 bg-transparent"
+                          >
                             <Eye className="h-4 w-4 mr-1" />
                             Preview
                           </Button>
@@ -624,19 +838,29 @@ export default function ContractManagementPage() {
                         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                           <DialogHeader>
                             <DialogTitle>{template.name}</DialogTitle>
-                            <DialogDescription>{template.description}</DialogDescription>
+                            <DialogDescription>
+                              {template.description}
+                            </DialogDescription>
                           </DialogHeader>
                           <div className="space-y-4">
                             <div className="p-4 border rounded-lg bg-muted/10">
-                              <pre className="whitespace-pre-wrap text-sm">{template.content}</pre>
+                              <pre className="whitespace-pre-wrap text-sm">
+                                {template.content}
+                              </pre>
                             </div>
                             <div className="space-y-2">
                               <h4 className="font-semibold">Template Fields</h4>
                               <div className="grid grid-cols-2 gap-2">
                                 {template.fields.map((field, index) => (
-                                  <div key={index} className="p-2 border rounded text-sm">
-                                    <strong>{field.label}</strong> ({field.type})
-                                    {field.required && <span className="text-red-500">*</span>}
+                                  <div
+                                    key={index}
+                                    className="p-2 border rounded text-sm"
+                                  >
+                                    <strong>{field.label}</strong> ({field.type}
+                                    )
+                                    {field.required && (
+                                      <span className="text-red-500">*</span>
+                                    )}
                                   </div>
                                 ))}
                               </div>
@@ -644,49 +868,68 @@ export default function ContractManagementPage() {
                           </div>
                         </DialogContent>
                       </Dialog>
-                      <Dialog open={isGenerateContractOpen} onOpenChange={setIsGenerateContractOpen}>
+                      <Dialog
+                        open={isGenerateContractOpen}
+                        onOpenChange={setIsGenerateContractOpen}
+                      >
                         <DialogTrigger asChild>
-                          <Button size="sm" className="flex-1" onClick={() => setSelectedTemplate(template)}>
+                          <Button
+                            size="sm"
+                            className="flex-1"
+                            onClick={() => setSelectedTemplate(template)}
+                          >
                             <FileText className="h-4 w-4 mr-1" />
                             Generate
                           </Button>
                         </DialogTrigger>
                         <DialogContent className="max-w-2xl">
                           <DialogHeader>
-                            <DialogTitle>Generate Contract from Template</DialogTitle>
+                            <DialogTitle>
+                              Generate Contract from Template
+                            </DialogTitle>
                             <DialogDescription>
-                              Fill in the template fields to generate a new contract
+                              Fill in the template fields to generate a new
+                              contract
                             </DialogDescription>
                           </DialogHeader>
                           {selectedTemplate && (
                             <div className="space-y-4">
-                              {selectedTemplate.fields.map((field: any, index: number) => (
-                                <div key={index} className="space-y-2">
-                                  <Label htmlFor={field.name}>
-                                    {field.label}
-                                    {field.required && <span className="text-red-500">*</span>}
-                                  </Label>
-                                  <Input
-                                    id={field.name}
-                                    type={field.type}
-                                    value={templateFormData[field.name] || ""}
-                                    onChange={(e) =>
-                                      setTemplateFormData({
-                                        ...templateFormData,
-                                        [field.name]: e.target.value,
-                                      })
-                                    }
-                                    required={field.required}
-                                  />
-                                </div>
-                              ))}
+                              {selectedTemplate.fields.map(
+                                (field: any, index: number) => (
+                                  <div key={index} className="space-y-2">
+                                    <Label htmlFor={field.name}>
+                                      {field.label}
+                                      {field.required && (
+                                        <span className="text-red-500">*</span>
+                                      )}
+                                    </Label>
+                                    <Input
+                                      id={field.name}
+                                      type={field.type}
+                                      value={templateFormData[field.name] || ""}
+                                      onChange={(e) =>
+                                        setTemplateFormData({
+                                          ...templateFormData,
+                                          [field.name]: e.target.value,
+                                        })
+                                      }
+                                      required={field.required}
+                                    />
+                                  </div>
+                                )
+                              )}
                             </div>
                           )}
                           <DialogFooter>
-                            <Button variant="outline" onClick={() => setIsGenerateContractOpen(false)}>
+                            <Button
+                              variant="outline"
+                              onClick={() => setIsGenerateContractOpen(false)}
+                            >
                               Cancel
                             </Button>
-                            <Button onClick={handleGenerateContract}>Generate Contract</Button>
+                            <Button onClick={handleGenerateContract}>
+                              Generate Contract
+                            </Button>
                           </DialogFooter>
                         </DialogContent>
                       </Dialog>
@@ -708,27 +951,43 @@ export default function ContractManagementPage() {
             <Card>
               <CardHeader>
                 <CardTitle>DocuSign Integration</CardTitle>
-                <CardDescription>Configure digital signature settings</CardDescription>
+                <CardDescription>
+                  Configure digital signature settings
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <Label>DocuSign API Status</Label>
-                    <p className="text-sm text-muted-foreground">Connected and active</p>
+                    <p className="text-sm text-muted-foreground">
+                      Connected and active
+                    </p>
                   </div>
-                  <Badge className="bg-green-100 text-green-800">Connected</Badge>
+                  <Badge className="bg-green-100 text-green-800">
+                    Connected
+                  </Badge>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="api-key">API Key</Label>
-                  <Input id="api-key" type="password" defaultValue="••••••••••••••••" />
+                  <Input
+                    id="api-key"
+                    type="password"
+                    defaultValue="••••••••••••••••"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="webhook-url">Webhook URL</Label>
-                  <Input id="webhook-url" defaultValue="https://api.safarcapital.com/webhooks/docusign" />
+                  <Input
+                    id="webhook-url"
+                    defaultValue="https://api.safarcapital.com/webhooks/docusign"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="account-id">Account ID</Label>
-                  <Input id="account-id" defaultValue="12345678-1234-1234-1234-123456789012" />
+                  <Input
+                    id="account-id"
+                    defaultValue="12345678-1234-1234-1234-123456789012"
+                  />
                 </div>
                 <Button>Update DocuSign Configuration</Button>
               </CardContent>
@@ -738,32 +997,65 @@ export default function ContractManagementPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Contract Settings</CardTitle>
-                <CardDescription>Configure default contract terms and settings</CardDescription>
+                <CardDescription>
+                  Configure default contract terms and settings
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="default-advance-rate">Default Advance Rate (%)</Label>
-                    <Input id="default-advance-rate" type="number" defaultValue="85" />
+                    <Label htmlFor="default-advance-rate">
+                      Default Advance Rate (%)
+                    </Label>
+                    <Input
+                      id="default-advance-rate"
+                      type="number"
+                      defaultValue="85"
+                    />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="default-factor-fee">Default Factor Fee (%)</Label>
-                    <Input id="default-factor-fee" type="number" step="0.1" defaultValue="2.5" />
+                    <Label htmlFor="default-factor-fee">
+                      Default Factor Fee (%)
+                    </Label>
+                    <Input
+                      id="default-factor-fee"
+                      type="number"
+                      step="0.1"
+                      defaultValue="2.5"
+                    />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="default-minimum-fee">Default Minimum Fee ($)</Label>
-                    <Input id="default-minimum-fee" type="number" defaultValue="500" />
+                    <Label htmlFor="default-minimum-fee">
+                      Default Minimum Fee ($)
+                    </Label>
+                    <Input
+                      id="default-minimum-fee"
+                      type="number"
+                      defaultValue="500"
+                    />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="default-term-length">Default Term Length (days)</Label>
-                    <Input id="default-term-length" type="number" defaultValue="60" />
+                    <Label htmlFor="default-term-length">
+                      Default Term Length (days)
+                    </Label>
+                    <Input
+                      id="default-term-length"
+                      type="number"
+                      defaultValue="60"
+                    />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="contract-numbering">Contract Numbering Format</Label>
-                  <Input id="contract-numbering" defaultValue="CT-{YYYY}-{###}" />
+                  <Label htmlFor="contract-numbering">
+                    Contract Numbering Format
+                  </Label>
+                  <Input
+                    id="contract-numbering"
+                    defaultValue="CT-{YYYY}-{###}"
+                  />
                   <p className="text-sm text-muted-foreground">
-                    Use {"{YYYY}"} for year, {"{MM}"} for month, {"{###}"} for sequential number
+                    Use {"{YYYY}"} for year, {"{MM}"} for month, {"{###}"} for
+                    sequential number
                   </p>
                 </div>
                 <Button>Save Contract Settings</Button>
@@ -774,34 +1066,50 @@ export default function ContractManagementPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Notification Settings</CardTitle>
-                <CardDescription>Configure contract-related notifications</CardDescription>
+                <CardDescription>
+                  Configure contract-related notifications
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-4">
                   <div className="flex items-center space-x-2">
                     <Checkbox id="contract-created" defaultChecked />
-                    <Label htmlFor="contract-created">Notify when new contract is created</Label>
+                    <Label htmlFor="contract-created">
+                      Notify when new contract is created
+                    </Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <Checkbox id="contract-signed" defaultChecked />
-                    <Label htmlFor="contract-signed">Notify when contract is signed</Label>
+                    <Label htmlFor="contract-signed">
+                      Notify when contract is signed
+                    </Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <Checkbox id="contract-expiring" defaultChecked />
-                    <Label htmlFor="contract-expiring">Notify when contract is expiring (30 days)</Label>
+                    <Label htmlFor="contract-expiring">
+                      Notify when contract is expiring (30 days)
+                    </Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <Checkbox id="signature-pending" defaultChecked />
-                    <Label htmlFor="signature-pending">Notify when signature is pending (7 days)</Label>
+                    <Label htmlFor="signature-pending">
+                      Notify when signature is pending (7 days)
+                    </Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <Checkbox id="compliance-issues" defaultChecked />
-                    <Label htmlFor="compliance-issues">Notify about compliance issues</Label>
+                    <Label htmlFor="compliance-issues">
+                      Notify about compliance issues
+                    </Label>
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="notification-email">Notification Email</Label>
-                  <Input id="notification-email" type="email" defaultValue="admin@safarcapital.com" />
+                  <Input
+                    id="notification-email"
+                    type="email"
+                    defaultValue="admin@safarcapital.com"
+                  />
                 </div>
                 <Button>Save Notification Settings</Button>
               </CardContent>
@@ -811,11 +1119,15 @@ export default function ContractManagementPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Document Management</CardTitle>
-                <CardDescription>Configure document storage and retention policies</CardDescription>
+                <CardDescription>
+                  Configure document storage and retention policies
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="retention-period">Document Retention Period (years)</Label>
+                  <Label htmlFor="retention-period">
+                    Document Retention Period (years)
+                  </Label>
                   <Input id="retention-period" type="number" defaultValue="7" />
                 </div>
                 <div className="space-y-2">
@@ -826,8 +1138,12 @@ export default function ContractManagementPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="aws-s3">AWS S3</SelectItem>
-                      <SelectItem value="azure-blob">Azure Blob Storage</SelectItem>
-                      <SelectItem value="google-cloud">Google Cloud Storage</SelectItem>
+                      <SelectItem value="azure-blob">
+                        Azure Blob Storage
+                      </SelectItem>
+                      <SelectItem value="google-cloud">
+                        Google Cloud Storage
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -876,7 +1192,9 @@ export default function ContractManagementPage() {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Create New Contract</DialogTitle>
-            <DialogDescription>Enter the details for the new contract</DialogDescription>
+            <DialogDescription>
+              Enter the details for the new contract
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -885,7 +1203,12 @@ export default function ContractManagementPage() {
                 <Input
                   id="client-name"
                   value={contractFormData.clientName || ""}
-                  onChange={(e) => setContractFormData({ ...contractFormData, clientName: e.target.value })}
+                  onChange={(e) =>
+                    setContractFormData({
+                      ...contractFormData,
+                      clientName: e.target.value,
+                    })
+                  }
                 />
               </div>
               <div className="space-y-2">
@@ -894,7 +1217,12 @@ export default function ContractManagementPage() {
                   id="client-email"
                   type="email"
                   value={contractFormData.clientEmail || ""}
-                  onChange={(e) => setContractFormData({ ...contractFormData, clientEmail: e.target.value })}
+                  onChange={(e) =>
+                    setContractFormData({
+                      ...contractFormData,
+                      clientEmail: e.target.value,
+                    })
+                  }
                 />
               </div>
             </div>
@@ -903,15 +1231,30 @@ export default function ContractManagementPage() {
                 <Label htmlFor="contract-type">Contract Type</Label>
                 <Select
                   value={contractFormData.contractType || ""}
-                  onValueChange={(value) => setContractFormData({ ...contractFormData, contractType: value })}
+                  onValueChange={(value) =>
+                    setContractFormData({
+                      ...contractFormData,
+                      contractType: value,
+                    })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select contract type" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="trade-finance">Trade Finance</SelectItem>
-                    <SelectItem value="invoice-factoring">Invoice Factoring</SelectItem>
-                    <SelectItem value="supply-chain">Supply Chain Finance</SelectItem>
+                    <SelectItem value="invoice-factoring">
+                      Invoice Factoring
+                    </SelectItem>
+                    <SelectItem value="supply-chain">
+                      Supply Chain Finance
+                    </SelectItem>
+                    <SelectItem value="invoice-factoring">
+                      Invoice Factoring
+                    </SelectItem>
+                    <SelectItem value="supply-chain">
+                      Supply Chain Finance
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -921,7 +1264,12 @@ export default function ContractManagementPage() {
                   id="contract-value"
                   type="number"
                   value={contractFormData.contractValue || ""}
-                  onChange={(e) => setContractFormData({ ...contractFormData, contractValue: e.target.value })}
+                  onChange={(e) =>
+                    setContractFormData({
+                      ...contractFormData,
+                      contractValue: e.target.value,
+                    })
+                  }
                 />
               </div>
             </div>
@@ -932,7 +1280,12 @@ export default function ContractManagementPage() {
                   id="advance-rate"
                   type="number"
                   value={contractFormData.advanceRate || ""}
-                  onChange={(e) => setContractFormData({ ...contractFormData, advanceRate: e.target.value })}
+                  onChange={(e) =>
+                    setContractFormData({
+                      ...contractFormData,
+                      advanceRate: e.target.value,
+                    })
+                  }
                 />
               </div>
               <div className="space-y-2">
@@ -942,7 +1295,12 @@ export default function ContractManagementPage() {
                   type="number"
                   step="0.1"
                   value={contractFormData.factorFee || ""}
-                  onChange={(e) => setContractFormData({ ...contractFormData, factorFee: e.target.value })}
+                  onChange={(e) =>
+                    setContractFormData({
+                      ...contractFormData,
+                      factorFee: e.target.value,
+                    })
+                  }
                 />
               </div>
               <div className="space-y-2">
@@ -951,7 +1309,12 @@ export default function ContractManagementPage() {
                   id="term-length"
                   type="number"
                   value={contractFormData.termLength || ""}
-                  onChange={(e) => setContractFormData({ ...contractFormData, termLength: e.target.value })}
+                  onChange={(e) =>
+                    setContractFormData({
+                      ...contractFormData,
+                      termLength: e.target.value,
+                    })
+                  }
                 />
               </div>
             </div>
@@ -960,13 +1323,21 @@ export default function ContractManagementPage() {
               <Textarea
                 id="notes"
                 value={contractFormData.notes || ""}
-                onChange={(e) => setContractFormData({ ...contractFormData, notes: e.target.value })}
+                onChange={(e) =>
+                  setContractFormData({
+                    ...contractFormData,
+                    notes: e.target.value,
+                  })
+                }
                 placeholder="Additional notes or special terms..."
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsNewContractOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsNewContractOpen(false)}
+            >
               Cancel
             </Button>
             <Button onClick={handleCreateContract}>Create Contract</Button>
@@ -979,13 +1350,18 @@ export default function ContractManagementPage() {
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Create New Template</DialogTitle>
-            <DialogDescription>Create a new contract template</DialogDescription>
+            <DialogDescription>
+              Create a new contract template
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="template-name">Template Name</Label>
-                <Input id="template-name" placeholder="e.g., Standard Trade Finance Agreement" />
+                <Input
+                  id="template-name"
+                  placeholder="e.g., Standard Trade Finance Agreement"
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="template-category">Category</Label>
@@ -994,16 +1370,29 @@ export default function ContractManagementPage() {
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="trade-finance">Trade Finance</SelectItem>
-                    <SelectItem value="factoring">Factoring</SelectItem>
-                    <SelectItem value="supply-chain">Supply Chain</SelectItem>
+                    <SelectItem value="Factoring-and-Security-Agreement">
+                      Factoring and Security Agreement
+                    </SelectItem>
+                    <SelectItem value="Special-Power-of-Attorney">
+                      Special Power of Attorney
+                    </SelectItem>
+                    <SelectItem value="Bill-of-Sale">Bill of Sale</SelectItem>
+                    <SelectItem value="Corporate-Resolutions">
+                      Corporate Resolutions
+                    </SelectItem>
+                    <SelectItem value="Intercreditor-Agreement">
+                      Intercreditor Agreement
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="template-description">Description</Label>
-              <Input id="template-description" placeholder="Brief description of the template" />
+              <Input
+                id="template-description"
+                placeholder="Brief description of the template"
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="template-content">Template Content</Label>
@@ -1015,7 +1404,10 @@ export default function ContractManagementPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsNewTemplateOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsNewTemplateOpen(false)}
+            >
               Cancel
             </Button>
             <Button>Create Template</Button>
@@ -1023,5 +1415,5 @@ export default function ContractManagementPage() {
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }

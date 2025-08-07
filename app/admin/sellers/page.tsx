@@ -985,21 +985,21 @@ export default function UnifiedSellerManagementPage() {
         <Download className="h-4 w-4" />
         {isExporting ? "Exporting..." : "Export Data"}
       </Button>
-      <Button
+      {/* <Button
         variant="outline"
         className="gap-2 bg-transparent"
         onClick={() => setShowAdvancedFilters(true)}
       >
         <Filter className="h-4 w-4" />
         Advanced Filters
-      </Button>
-      <Button
+      </Button> */}
+      {/* <Button
         className="gap-2 bg-red-600 hover:bg-red-700"
         onClick={() => router.push("/admin/sellers/create")}
       >
         <Plus className="h-4 w-4" />
         Create Application
-      </Button>
+      </Button> */}
     </div>
   );
 

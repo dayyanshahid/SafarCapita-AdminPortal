@@ -62,8 +62,8 @@ export default function LoginPage() {
         // Show success toast
         toast.success(data.message || "Login successful");
 
-        // Use replace instead of push to clear navigation history
-        router.replace("/admin");
+        // Use push to maintain navigation history
+        router.push("/admin");
       } else {
         throw new Error(data.error_message || "Login failed");
       }
