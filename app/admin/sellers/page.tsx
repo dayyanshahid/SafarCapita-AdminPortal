@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useToast } from "@/components/ui/use-toast";
 import { useRouter } from "next/navigation";
 import { useSelector } from "react-redux";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,7 @@ import makeRequest from "@/Api's/ApiHelper";
 import {
   getSellerManagementPortalApiCall,
   getCompanyListApiCall,
+  updateCompanyStatusApiCall,
 } from "@/Api's/repo";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -570,6 +572,8 @@ const mockApplications: SellerApplication[] = [
 
 export default function UnifiedSellerManagementPage() {
   const router = useRouter();
+  const { toast } = useToast();
+  const [companies, setCompanies] = useState<CompanyDetails[]>([]);
   const isLoading = useSelector((state: any) => state.loading);
   const [activeTab, setActiveTab] = useState("overview");
   const [applications, setApplications] =
@@ -882,22 +886,59 @@ export default function UnifiedSellerManagementPage() {
     );
   };
 
-  const handleApplicationAction = (
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState<{
+    id: string;
+    action: "approve" | "reject";
+  } | null>(null);
+
+  const handleApplicationAction = async (
     applicationId: string,
     action: "approve" | "reject",
     notes?: string
   ) => {
-    setApplications((prev) =>
-      prev.map((app) =>
-        app.id === applicationId
-          ? {
-              ...app,
-              status: action === "approve" ? "approved" : "rejected",
-              lastUpdated: new Date().toISOString(),
-            }
-          : app
-      )
-    );
+    try {
+      setIsUpdatingStatus({ id: applicationId, action });
+
+      const response = await fetch(updateCompanyStatusApiCall, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          _id: applicationId,
+          status: action === "approve" ? "Approved" : "Rejected",
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to update status");
+      }
+
+      // Refresh the data to get updated status
+      await fetchCompanyList();
+
+      toast({
+        title: "Success",
+        description: `Company ${
+          action === "approve" ? "approved" : "rejected"
+        } successfully`,
+        variant: "success",
+      });
+    } catch (error) {
+      console.error("Error updating company status:", error);
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to update company status",
+        variant: "error",
+      });
+    } finally {
+      setIsUpdatingStatus(null);
+    }
   };
 
   const handleDocumentAction = (
@@ -1140,7 +1181,7 @@ export default function UnifiedSellerManagementPage() {
           </div>
 
           {/* Recent Activity */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
             <Card>
               <CardHeader>
                 <CardTitle>Recent Applications</CardTitle>
@@ -1180,7 +1221,7 @@ export default function UnifiedSellerManagementPage() {
               </CardContent>
             </Card>
 
-            <Card>
+            {/* <Card>
               <CardHeader>
                 <CardTitle>Document Review Queue</CardTitle>
                 <CardDescription>
@@ -1222,7 +1263,7 @@ export default function UnifiedSellerManagementPage() {
                     ))}
                 </div>
               </CardContent>
-            </Card>
+            </Card> */}
           </div>
         </TabsContent>
 
@@ -1583,9 +1624,20 @@ export default function UnifiedSellerManagementPage() {
                                           "approve"
                                         );
                                       }}
+                                      disabled={isUpdatingStatus !== null}
                                     >
-                                      <CheckCircle className="h-4 w-4 mr-1" />
-                                      Approve
+                                      {isUpdatingStatus?.id === company._id &&
+                                      isUpdatingStatus.action === "approve" ? (
+                                        <div className="flex items-center">
+                                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent mr-1" />
+                                          Approving
+                                        </div>
+                                      ) : (
+                                        <>
+                                          <CheckCircle className="h-4 w-4 mr-1" />
+                                          Approve
+                                        </>
+                                      )}
                                     </Button>
                                     <Button
                                       size="sm"
@@ -1598,9 +1650,20 @@ export default function UnifiedSellerManagementPage() {
                                           "reject"
                                         );
                                       }}
+                                      disabled={isUpdatingStatus !== null}
                                     >
-                                      <XCircle className="h-4 w-4 mr-1" />
-                                      Reject
+                                      {isUpdatingStatus?.id === company._id &&
+                                      isUpdatingStatus.action === "reject" ? (
+                                        <div className="flex items-center">
+                                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent mr-1" />
+                                          Rejecting
+                                        </div>
+                                      ) : (
+                                        <>
+                                          <XCircle className="h-4 w-4 mr-1" />
+                                          Reject
+                                        </>
+                                      )}
                                     </Button>
                                   </>
                                 )}
