@@ -1120,7 +1120,10 @@ export default function UnifiedSellerManagementPage() {
                 <Button
                   className="mt-3 bg-green-600 hover:bg-green-700"
                   size="sm"
-                  onClick={() => setActiveTab("applications")}
+                  onClick={() => {
+                    setStatusFilter("pending");
+                    setActiveTab("applications");
+                  }}
                 >
                   Review Now
                 </Button>
@@ -1143,7 +1146,7 @@ export default function UnifiedSellerManagementPage() {
                   className="mt-3 bg-yellow-600 hover:bg-yellow-700"
                   size="sm"
                   onClick={() => {
-                    setRiskFilter("high");
+                    setStatusFilter("under_review");
                     setActiveTab("applications");
                   }}
                 >
@@ -1306,7 +1309,7 @@ export default function UnifiedSellerManagementPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">
-                      Under Review
+                      On Hold
                     </p>
                     <p className="text-2xl font-bold text-blue-600">
                       {companyListData?.analytics.under_review || 0}
@@ -1374,36 +1377,11 @@ export default function UnifiedSellerManagementPage() {
                     <SelectContent>
                       <SelectItem value="all">All Status</SelectItem>
                       <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="under_review">Under Review</SelectItem>
+                      <SelectItem value="under_review">On Hold</SelectItem>
                       <SelectItem value="approved">Approved</SelectItem>
                       <SelectItem value="rejected">Rejected</SelectItem>
                     </SelectContent>
                   </Select>
-                  {/* <Select
-                    value={priorityFilter}
-                    onValueChange={setPriorityFilter}
-                  >
-                    <SelectTrigger className="w-40">
-                      <SelectValue placeholder="Priority" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Priority</SelectItem>
-                      <SelectItem value="high">High</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="low">Low</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Select value={riskFilter} onValueChange={setRiskFilter}>
-                    <SelectTrigger className="w-40">
-                      <SelectValue placeholder="Risk" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Risk</SelectItem>
-                      <SelectItem value="low">Low</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="high">High</SelectItem>
-                    </SelectContent>
-                  </Select> */}
                 </div>
               </div>
             </CardContent>
@@ -1412,9 +1390,7 @@ export default function UnifiedSellerManagementPage() {
           {/* Applications List with Embedded Documents */}
           <Card>
             <CardHeader>
-              <CardTitle>
-                Applications ({filteredApplications.length})
-              </CardTitle>
+              <CardTitle>Applications</CardTitle>
               <CardDescription>
                 Click on an application to view and manage its documents
               </CardDescription>
@@ -1460,6 +1436,8 @@ export default function UnifiedSellerManagementPage() {
                     // Local filtering
                     const matchesStatus =
                       statusFilter === "all" ||
+                      (statusFilter === "under_review" &&
+                        company.status === "Hold") ||
                       company.status.toLowerCase() === statusFilter;
                     const matchesPriority = priorityFilter === "all"; // Add priority filter if needed
                     const matchesRisk = riskFilter === "all"; // Add risk filter if needed

@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, use } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/reducer";
 import {
   Card,
   CardContent,
@@ -10,6 +12,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import makeRequest from "@/Api's/ApiHelper";
+import { getCompanyDetailById } from "@/Api's/repo";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -43,6 +47,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+
+const BASE_URL = process.env.NEXT_PUBLIC_IMAGE_URL;
 
 // Enhanced mock data for TechCorp Solutions with contracts and financing requests
 const mockApplication = {
@@ -481,56 +487,194 @@ const formatDate = (dateString: string) => {
   });
 };
 
-export default function SellerApplicationDetailPage({
-  params,
-}: {
-  params: { id: string };
-}) {
+interface ApiResponse {
+  response_code: number;
+  success: boolean;
+  status_code: number;
+  message: string;
+  error_message: null | string;
+  result: {
+    bank_details: {
+      _id: string;
+      bank_name: string;
+      company_id: string;
+      account_holder_name: string;
+      account_number: string;
+      routing_number: string;
+      swift_bic_code: string;
+      account_type: string;
+      currency: string;
+      is_verified: number;
+      type: string;
+      bank_address: string;
+      iban: string;
+      action_type: number;
+      createdAt: string;
+      updatedAt: string;
+    };
+    company: {
+      _id: string;
+      legal_company_name: string;
+      business_type: string;
+      website: string;
+      street_address: string;
+      city: string;
+      zip_postal_code: string;
+      country: string;
+      phone_number: string;
+      annual_revenue_range: string;
+      years_in_business: string;
+      avg_order_value: string;
+      monthly_transaction_volume: string;
+      primary_export_market: string;
+      major_client_buyers: string;
+      cash_flow_cyle: string;
+      no_of_employees: string;
+      employee_id: {
+        _id: string;
+        auth_id: string;
+        first_name: string;
+        last_name: string;
+        image: string;
+        job_title: string;
+        department: string;
+        bio: string;
+        two_factor_authentication: string;
+        email_notifications: number;
+        sms_notifications: number;
+        push_notifications: number;
+        notification_types: {
+          invoice_updates: string;
+          payment_alerts: string;
+          system_maintenance: string;
+          marketing_emails: string;
+        };
+        timezone: string;
+        language: string;
+        action_type: number;
+        createdAt: string;
+        updatedAt: string;
+      };
+      createdAt: string;
+      updatedAt: string;
+      bank_statements: string;
+      business_registration_certificate: string;
+      financial_statements: string;
+      tax_registration_documents: string;
+      verification_image: string;
+      document_status: string;
+      export_license?: string;
+      trade_license?: string;
+    };
+    invoices: {
+      data: Array<{
+        _id: string;
+        invoice_number: string;
+        invoice_amount: number;
+        currency: string;
+        status: string;
+        requested_financing_amount: number;
+        invoice_date: string;
+        due_date: string;
+        delivery_date: string;
+        payment_terms: string;
+        invoice_description: string;
+        order_number: string;
+        incoterms: string;
+        port_of_loading: string;
+        port_of_discharge: string;
+        shipment_information: string;
+        product_description: string;
+        product_category: string;
+        unit_of_measure: string;
+        quantity: number;
+        unit_price: number;
+        total_weight_kg: number;
+        requested_advance_rate: number;
+        repayment_period: string;
+        buyers_id: {
+          _id: string;
+          buyer_company_name: string;
+          registration_number: string;
+          country: string;
+          buyer_address: string;
+          contact_email: string;
+          contact_phone: string;
+          credit_limit: number;
+          status: string;
+        };
+        invoice_documents: {
+          fcr: string;
+          gd: string;
+          bill_of_lading: string;
+          packing_list: string;
+        };
+        timeline: {
+          steps: Array<{
+            name: string;
+            status: string;
+            date: string | null;
+          }>;
+        };
+      }>;
+      totalCount: number;
+      active_invoices: number;
+      total_funded: number;
+      average_processing_time: number;
+      avg_approval_percentage: number;
+    };
+    stats: {
+      annual_revenue: number;
+    };
+  };
+}
+
+interface PageProps {
+  params: Promise<{ id: string }>;
+}
+
+export default function SellerApplicationDetailPage({ params }: PageProps) {
+  const unwrappedParams = use(params);
   const [activeTab, setActiveTab] = useState("overview");
   const [newNote, setNewNote] = useState("");
+  const [apiData, setApiData] = useState<ApiResponse | null>(null);
   const router = useRouter();
+  const isLoading = useSelector((state: RootState) => state.loading);
 
-  // Calculate summary statistics
-  const contractStats = {
-    total: mockApplication.contracts.length,
-    active: mockApplication.contracts.filter((c) => c.status === "active")
-      .length,
-    totalValue: mockApplication.contracts.reduce(
-      (sum, c) => sum + c.contractValue,
-      0
-    ),
-    avgUtilization: Math.round(
-      mockApplication.contracts.reduce((sum, c) => sum + c.utilization, 0) /
-        mockApplication.contracts.length
-    ),
-  };
+  useEffect(() => {
+    const fetchCompanyDetails = async () => {
+      try {
+        const response = await makeRequest({
+          url: getCompanyDetailById,
+          method: "GET",
+          params: { _id: unwrappedParams.id },
+        });
+        if (response?.data?.success) {
+          setApiData(response.data);
+        }
+      } catch (error) {
+        console.error("Error fetching company details:", error);
+      }
+    };
 
-  const financingStats = {
-    total: mockApplication.financingRequests.length,
-    approved: mockApplication.financingRequests.filter(
-      (f) => f.status === "approved" || f.status === "completed"
-    ).length,
-    totalAmount: mockApplication.financingRequests.reduce(
-      (sum, f) => sum + f.requestedAmount,
-      0
-    ),
-    approvalRate: Math.round(
-      (mockApplication.financingRequests.filter(
-        (f) => f.status === "approved" || f.status === "completed"
-      ).length /
-        mockApplication.financingRequests.length) *
-        100
-    ),
-    avgRiskScore: Math.round(
-      mockApplication.financingRequests.reduce(
-        (sum, f) => sum + f.riskScore,
-        0
-      ) / mockApplication.financingRequests.length
-    ),
-  };
+    fetchCompanyDetails();
+  }, [unwrappedParams.id]);
+
+  // We'll handle contracts and financing in separate API integrations
+
+  // Loading overlay component
+  const LoadingOverlay = () => (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+      <div className="bg-white rounded-lg p-6 flex flex-col items-center gap-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-red-600 border-t-transparent"></div>
+        <p className="text-lg font-medium">Loading...</p>
+      </div>
+    </div>
+  );
 
   return (
     <div className="flex-1 space-y-6 p-6">
+      {isLoading && <LoadingOverlay />}
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -541,16 +685,30 @@ export default function SellerApplicationDetailPage({
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-3xl font-bold tracking-tight">
-                {mockApplication.company}
+                {apiData?.result?.company?.legal_company_name
+                  ? apiData.result.company.legal_company_name
+                  : "No value found"}
               </h1>
-              {getStatusBadge(mockApplication.status)}
+              {getStatusBadge(
+                apiData?.result?.company?.document_status
+                  ? apiData.result.company.document_status
+                  : "-"
+              )}
               <Badge variant="outline" className="bg-blue-50 text-blue-700">
-                {mockApplication.companyId}
+                {apiData?.result?.company?._id
+                  ? apiData.result.company._id
+                  : "No value found"}
               </Badge>
             </div>
             <p className="text-muted-foreground">
-              Applied {formatDate(mockApplication.submissionDate)} • Last
-              updated {formatDate(mockApplication.lastUpdated)}
+              Created{" "}
+              {apiData?.result?.company?.createdAt
+                ? formatDate(apiData.result.company.createdAt)
+                : "-"}{" "}
+              • Last updated{" "}
+              {apiData?.result?.company?.updatedAt
+                ? formatDate(apiData.result.company.updatedAt)
+                : "-"}
             </p>
           </div>
         </div>
@@ -577,13 +735,10 @@ export default function SellerApplicationDetailPage({
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {formatCurrency(
-                mockApplication.annualRevenue,
-                mockApplication.currency
-              )}
+              ${apiData?.result?.stats?.annual_revenue || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              {mockApplication.employeeCount} employees
+              {apiData?.result?.company?.no_of_employees || "-"} employees
             </p>
           </CardContent>
         </Card>
@@ -690,14 +845,14 @@ export default function SellerApplicationDetailPage({
         onValueChange={setActiveTab}
         className="space-y-6"
       >
-        <TabsList className="grid w-full grid-cols-7">
+        <TabsList className="grid w-full grid-cols-5  ">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="company">Company Info</TabsTrigger>
           <TabsTrigger value="contracts">Contracts</TabsTrigger>
           <TabsTrigger value="financing">Financing</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
-          <TabsTrigger value="performance">Performance</TabsTrigger>
-          <TabsTrigger value="actions">Actions</TabsTrigger>
+          {/* <TabsTrigger value="performance">Performance</TabsTrigger> */}
+          {/* <TabsTrigger value="actions">Actions</TabsTrigger> */}
         </TabsList>
 
         {/* Overview Tab */}
@@ -715,34 +870,38 @@ export default function SellerApplicationDetailPage({
                 <div>
                   <Label className="text-sm font-medium">Company Name</Label>
                   <p className="text-sm text-muted-foreground">
-                    {mockApplication.company}
+                    {apiData?.result?.company?.legal_company_name ||
+                      "No value found"}
                   </p>
                 </div>
                 <div>
-                  <Label className="text-sm font-medium">Industry</Label>
+                  <Label className="text-sm font-medium">Business Type</Label>
                   <p className="text-sm text-muted-foreground">
-                    {mockApplication.industry} - {mockApplication.subIndustry}
+                    {apiData?.result?.company?.business_type ||
+                      "No value found"}
                   </p>
                 </div>
                 <div>
-                  <Label className="text-sm font-medium">
-                    Business Description
-                  </Label>
+                  <Label className="text-sm font-medium">Website</Label>
                   <p className="text-sm text-muted-foreground">
-                    {mockApplication.businessDescription}
+                    {apiData?.result?.company?.website || "No value found"}
                   </p>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-sm font-medium">Established</Label>
+                    <Label className="text-sm font-medium">
+                      Years in Business
+                    </Label>
                     <p className="text-sm text-muted-foreground">
-                      {mockApplication.yearEstablished}
+                      {apiData?.result?.company?.years_in_business ||
+                        "No value found"}
                     </p>
                   </div>
                   <div>
                     <Label className="text-sm font-medium">Employees</Label>
                     <p className="text-sm text-muted-foreground">
-                      {mockApplication.employeeCount}
+                      {apiData?.result?.company?.no_of_employees ||
+                        "No value found"}
                     </p>
                   </div>
                 </div>
@@ -758,7 +917,7 @@ export default function SellerApplicationDetailPage({
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div>
+                {/* <div>
                   <Label className="text-sm font-medium">Annual Revenue</Label>
                   <p className="text-lg font-semibold">
                     {formatCurrency(
@@ -766,31 +925,47 @@ export default function SellerApplicationDetailPage({
                       mockApplication.currency
                     )}
                   </p>
-                </div>
+                </div> */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-sm font-medium">Credit Rating</Label>
+                    <Label className="text-sm font-medium">
+                      Annual Revenue Range
+                    </Label>
                     <p className="text-sm text-muted-foreground">
-                      {mockApplication.creditRating}
+                      {apiData?.result?.company?.annual_revenue_range ||
+                        "No value found"}
                     </p>
                   </div>
                   <div>
                     <Label className="text-sm font-medium">
-                      Requested Credit Limit
+                      Monthly Transaction Volume
                     </Label>
                     <p className="text-sm text-muted-foreground">
-                      {formatCurrency(
-                        mockApplication.requestedCreditLimit,
-                        mockApplication.currency
-                      )}
+                      {apiData?.result?.company?.monthly_transaction_volume ||
+                        "No value found"}
                     </p>
                   </div>
                 </div>
-                <div>
-                  <Label className="text-sm font-medium">Banking Partner</Label>
-                  <p className="text-sm text-muted-foreground">
-                    {mockApplication.bankName}
-                  </p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm font-medium">
+                      Average Order Value
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      {apiData?.result?.company?.avg_order_value ||
+                        "No value found"}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium">
+                      Cash Flow Cycle
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      {apiData?.result?.company?.cash_flow_cyle ||
+                        "No value found"}{" "}
+                      days
+                    </p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -808,15 +983,11 @@ export default function SellerApplicationDetailPage({
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center p-3 bg-blue-50 rounded-lg">
-                    <div className="text-2xl font-bold text-blue-600">
-                      {contractStats.total}
-                    </div>
+                    <div className="text-2xl font-bold text-blue-600">-</div>
                     <div className="text-sm text-blue-700">Total Contracts</div>
                   </div>
                   <div className="text-center p-3 bg-green-50 rounded-lg">
-                    <div className="text-2xl font-bold text-green-600">
-                      {contractStats.active}
-                    </div>
+                    <div className="text-2xl font-bold text-green-600">-</div>
                     <div className="text-sm text-green-700">
                       Active Contracts
                     </div>
@@ -826,26 +997,7 @@ export default function SellerApplicationDetailPage({
                   <Label className="text-sm font-medium">
                     Total Contract Value
                   </Label>
-                  <p className="text-lg font-semibold">
-                    {formatCurrency(
-                      contractStats.totalValue,
-                      mockApplication.currency
-                    )}
-                  </p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium">
-                    Average Utilization
-                  </Label>
-                  <div className="flex items-center gap-2">
-                    <Progress
-                      value={contractStats.avgUtilization}
-                      className="flex-1"
-                    />
-                    <span className="text-sm font-medium">
-                      {contractStats.avgUtilization}%
-                    </span>
-                  </div>
+                  <p className="text-lg font-semibold">-</p>
                 </div>
               </CardContent>
             </Card>
@@ -862,7 +1014,8 @@ export default function SellerApplicationDetailPage({
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center p-3 bg-purple-50 rounded-lg">
                     <div className="text-2xl font-bold text-purple-600">
-                      {financingStats.total}
+                      {apiData?.result?.invoices?.totalCount ||
+                        "No value found"}
                     </div>
                     <div className="text-sm text-purple-700">
                       Total Requests
@@ -870,7 +1023,9 @@ export default function SellerApplicationDetailPage({
                   </div>
                   <div className="text-center p-3 bg-green-50 rounded-lg">
                     <div className="text-2xl font-bold text-green-600">
-                      {financingStats.approvalRate}%
+                      {apiData?.result?.invoices?.avg_approval_percentage ||
+                        "0"}{" "}
+                      %
                     </div>
                     <div className="text-sm text-green-700">Approval Rate</div>
                   </div>
@@ -880,32 +1035,15 @@ export default function SellerApplicationDetailPage({
                     Total Financed Amount
                   </Label>
                   <p className="text-lg font-semibold">
-                    {formatCurrency(
-                      financingStats.totalAmount,
-                      mockApplication.currency
-                    )}
+                    {apiData?.result?.invoices?.total_funded || "0"}
                   </p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium">
-                    Average Risk Score
-                  </Label>
-                  <div className="flex items-center gap-2">
-                    <Progress
-                      value={financingStats.avgRiskScore}
-                      className="flex-1"
-                    />
-                    <span className="text-sm font-medium">
-                      {financingStats.avgRiskScore}%
-                    </span>
-                  </div>
                 </div>
               </CardContent>
             </Card>
           </div>
 
           {/* Application Metrics */}
-          <Card>
+          {/* <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <TrendingUp className="h-5 w-5" />
@@ -948,7 +1086,7 @@ export default function SellerApplicationDetailPage({
                 </div>
               </div>
             </CardContent>
-          </Card>
+          </Card> */}
         </TabsContent>
 
         {/* Company Info Tab */}
@@ -967,60 +1105,99 @@ export default function SellerApplicationDetailPage({
                   <div>
                     <Label className="text-sm font-medium">Company Name</Label>
                     <p className="text-sm text-muted-foreground">
-                      {mockApplication.company}
+                      {apiData?.result?.company?.legal_company_name
+                        ? apiData.result.company.legal_company_name
+                        : apiData?.result?.company?.legal_company_name ===
+                          undefined
+                        ? "No key found"
+                        : "-"}
                     </p>
                   </div>
                   <div>
                     <Label className="text-sm font-medium">Company ID</Label>
                     <p className="text-sm text-muted-foreground">
-                      {mockApplication.companyId}
+                      {apiData?.result?.company?._id
+                        ? apiData.result.company._id
+                        : apiData?.result?.company?._id === undefined
+                        ? "No key found"
+                        : "-"}
+                    </p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm font-medium">Business Type</Label>
+                    <p className="text-sm text-muted-foreground">
+                      {apiData?.result?.company?.business_type
+                        ? apiData.result.company.business_type
+                        : apiData?.result?.company?.business_type === undefined
+                        ? "No key found"
+                        : "-"}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium">Website</Label>
+                    <p className="text-sm text-muted-foreground">
+                      {apiData?.result?.company?.website
+                        ? apiData.result.company.website
+                        : apiData?.result?.company?.website === undefined
+                        ? "No key found"
+                        : "-"}
                     </p>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label className="text-sm font-medium">
-                      Registration Number
+                      Years in Business
                     </Label>
                     <p className="text-sm text-muted-foreground">
-                      {mockApplication.registrationNumber}
+                      {apiData?.result?.company?.years_in_business
+                        ? apiData.result.company.years_in_business
+                        : apiData?.result?.company?.years_in_business ===
+                          undefined
+                        ? "No key found"
+                        : "-"}
                     </p>
                   </div>
-                  <div>
-                    <Label className="text-sm font-medium">Tax ID</Label>
-                    <p className="text-sm text-muted-foreground">
-                      {mockApplication.taxId}
-                    </p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label className="text-sm font-medium">
-                      Incorporation Date
+                      Number of Employees
                     </Label>
                     <p className="text-sm text-muted-foreground">
-                      {formatDate(mockApplication.incorporationDate)}
-                    </p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium">Company Type</Label>
-                    <p className="text-sm text-muted-foreground">
-                      {mockApplication.companyType}
+                      {apiData?.result?.company?.no_of_employees
+                        ? apiData.result.company.no_of_employees
+                        : apiData?.result?.company?.no_of_employees ===
+                          undefined
+                        ? "No key found"
+                        : "-"}
                     </p>
                   </div>
                 </div>
                 <div>
-                  <Label className="text-sm font-medium">Industry</Label>
+                  <Label className="text-sm font-medium">
+                    Primary Export Market
+                  </Label>
                   <p className="text-sm text-muted-foreground">
-                    {mockApplication.industry} - {mockApplication.subIndustry}
+                    {apiData?.result?.company?.primary_export_market
+                      ? apiData.result.company.primary_export_market
+                      : apiData?.result?.company?.primary_export_market ===
+                        undefined
+                      ? "No key found"
+                      : "-"}
                   </p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium">
-                    Business Description
+                    Major Client Buyers
                   </Label>
                   <p className="text-sm text-muted-foreground">
-                    {mockApplication.businessDescription}
+                    {apiData?.result?.company?.major_client_buyers
+                      ? apiData.result.company.major_client_buyers
+                      : apiData?.result?.company?.major_client_buyers ===
+                        undefined
+                      ? "No key found"
+                      : "-"}
                   </p>
                 </div>
               </CardContent>
@@ -1039,40 +1216,34 @@ export default function SellerApplicationDetailPage({
                   <Label className="text-sm font-medium">Primary Contact</Label>
                   <div className="space-y-1">
                     <p className="text-sm font-medium">
-                      {mockApplication.primaryContact}
+                      {apiData?.result?.company?.employee_id?.first_name
+                        ? apiData.result.company.employee_id.first_name
+                        : apiData?.result?.company?.employee_id?.first_name ===
+                          undefined
+                        ? "No key found"
+                        : "-"}{" "}
+                      {apiData?.result?.company?.employee_id?.last_name
+                        ? apiData.result.company.employee_id.last_name
+                        : apiData?.result?.company?.employee_id?.last_name ===
+                          undefined
+                        ? "No key found"
+                        : "-"}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      {mockApplication.position}
+                      {apiData?.result?.company?.employee_id?.job_title
+                        ? apiData.result.company.employee_id.job_title
+                        : apiData?.result?.company?.employee_id?.job_title ===
+                          undefined
+                        ? "No key found"
+                        : "-"}
                     </p>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Mail className="h-3 w-3" />
-                      {mockApplication.email}
-                    </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Phone className="h-3 w-3" />
-                      {mockApplication.phone}
-                    </div>
-                  </div>
-                </div>
-                <Separator />
-                <div>
-                  <Label className="text-sm font-medium">
-                    Alternate Contact
-                  </Label>
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium">
-                      {mockApplication.alternateContact}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {mockApplication.alternatePosition}
-                    </p>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Mail className="h-3 w-3" />
-                      {mockApplication.alternateEmail}
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Phone className="h-3 w-3" />
-                      {mockApplication.alternatePhone}
+                      {apiData?.result?.company?.phone_number
+                        ? apiData.result.company.phone_number
+                        : apiData?.result?.company?.phone_number === undefined
+                        ? "No key found"
+                        : "-"}
                     </div>
                   </div>
                 </div>
@@ -1091,44 +1262,45 @@ export default function SellerApplicationDetailPage({
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label className="text-sm font-medium">
-                    Registered Address
-                  </Label>
+                  <Label className="text-sm font-medium">Street Address</Label>
                   <p className="text-sm text-muted-foreground">
-                    {mockApplication.registeredAddress}
-                  </p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium">
-                    Operational Address
-                  </Label>
-                  <p className="text-sm text-muted-foreground">
-                    {mockApplication.operationalAddress}
-                  </p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium">Mailing Address</Label>
-                  <p className="text-sm text-muted-foreground">
-                    {mockApplication.mailingAddress}
+                    {apiData?.result?.company?.street_address
+                      ? apiData.result.company.street_address
+                      : apiData?.result?.company?.street_address === undefined
+                      ? "No key found"
+                      : "-"}
                   </p>
                 </div>
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <Label className="text-sm font-medium">Country</Label>
+                    <Label className="text-sm font-medium">City</Label>
                     <p className="text-sm text-muted-foreground">
-                      {mockApplication.country}
+                      {apiData?.result?.company?.city
+                        ? apiData.result.company.city
+                        : apiData?.result?.company?.city === undefined
+                        ? "No key found"
+                        : "-"}
                     </p>
                   </div>
                   <div>
-                    <Label className="text-sm font-medium">State</Label>
+                    <Label className="text-sm font-medium">Country</Label>
                     <p className="text-sm text-muted-foreground">
-                      {mockApplication.state}
+                      {apiData?.result?.company?.country
+                        ? apiData.result.company.country
+                        : apiData?.result?.company?.country === undefined
+                        ? "No key found"
+                        : "-"}
                     </p>
                   </div>
                   <div>
                     <Label className="text-sm font-medium">Zip Code</Label>
                     <p className="text-sm text-muted-foreground">
-                      {mockApplication.zipCode}
+                      {apiData?.result?.company?.zip_postal_code
+                        ? apiData.result.company.zip_postal_code
+                        : apiData?.result?.company?.zip_postal_code ===
+                          undefined
+                        ? "No key found"
+                        : "-"}
                     </p>
                   </div>
                 </div>
@@ -1147,7 +1319,7 @@ export default function SellerApplicationDetailPage({
                 <div>
                   <Label className="text-sm font-medium">Bank Name</Label>
                   <p className="text-sm text-muted-foreground">
-                    {mockApplication.bankName}
+                    {apiData?.result?.bank_details?.bank_name || "-"}
                   </p>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -1156,7 +1328,7 @@ export default function SellerApplicationDetailPage({
                       Account Number
                     </Label>
                     <p className="text-sm text-muted-foreground">
-                      {mockApplication.accountNumber}
+                      {apiData?.result?.bank_details?.account_number || "-"}
                     </p>
                   </div>
                   <div>
@@ -1164,7 +1336,7 @@ export default function SellerApplicationDetailPage({
                       Routing Number
                     </Label>
                     <p className="text-sm text-muted-foreground">
-                      {mockApplication.routingNumber}
+                      {apiData?.result?.bank_details?.routing_number || "-"}
                     </p>
                   </div>
                 </div>
@@ -1172,20 +1344,20 @@ export default function SellerApplicationDetailPage({
                   <div>
                     <Label className="text-sm font-medium">SWIFT Code</Label>
                     <p className="text-sm text-muted-foreground">
-                      {mockApplication.swiftCode}
+                      {apiData?.result?.bank_details?.swift_bic_code || "-"}
                     </p>
                   </div>
                   <div>
                     <Label className="text-sm font-medium">Currency</Label>
                     <p className="text-sm text-muted-foreground">
-                      {mockApplication.currency}
+                      {apiData?.result?.bank_details?.currency || "-"}
                     </p>
                   </div>
                 </div>
                 <div>
                   <Label className="text-sm font-medium">Bank Address</Label>
                   <p className="text-sm text-muted-foreground">
-                    {mockApplication.bankAddress}
+                    {apiData?.result?.bank_details?.bank_address || "-"}
                   </p>
                 </div>
               </CardContent>
@@ -1193,7 +1365,7 @@ export default function SellerApplicationDetailPage({
           </div>
 
           {/* Business Details */}
-          <Card>
+          {/* <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Package className="h-5 w-5" />
@@ -1264,7 +1436,7 @@ export default function SellerApplicationDetailPage({
                 </div>
               </div>
             </CardContent>
-          </Card>
+          </Card> */}
         </TabsContent>
 
         {/* Contracts Tab */}
@@ -1283,30 +1455,19 @@ export default function SellerApplicationDetailPage({
             <CardContent>
               <div className="grid gap-4 md:grid-cols-4">
                 <div className="text-center p-4 bg-blue-50 rounded-lg">
-                  <div className="text-2xl font-bold text-blue-600">
-                    {contractStats.total}
-                  </div>
+                  <div className="text-2xl font-bold text-blue-600">-</div>
                   <div className="text-sm text-blue-700">Total Contracts</div>
                 </div>
                 <div className="text-center p-4 bg-green-50 rounded-lg">
-                  <div className="text-2xl font-bold text-green-600">
-                    {contractStats.active}
-                  </div>
+                  <div className="text-2xl font-bold text-green-600">-</div>
                   <div className="text-sm text-green-700">Active Contracts</div>
                 </div>
                 <div className="text-center p-4 bg-purple-50 rounded-lg">
-                  <div className="text-2xl font-bold text-purple-600">
-                    {formatCurrency(
-                      contractStats.totalValue,
-                      mockApplication.currency
-                    )}
-                  </div>
+                  <div className="text-2xl font-bold text-purple-600">-</div>
                   <div className="text-sm text-purple-700">Total Value</div>
                 </div>
                 <div className="text-center p-4 bg-orange-50 rounded-lg">
-                  <div className="text-2xl font-bold text-orange-600">
-                    {contractStats.avgUtilization}%
-                  </div>
+                  <div className="text-2xl font-bold text-orange-600">-</div>
                   <div className="text-sm text-orange-700">Avg Utilization</div>
                 </div>
               </div>
@@ -1376,7 +1537,7 @@ export default function SellerApplicationDetailPage({
                     </p>
                   </div>
 
-                  <div>
+                  {/* <div>
                     <Label className="text-sm font-medium">
                       Contract Utilization
                     </Label>
@@ -1389,9 +1550,9 @@ export default function SellerApplicationDetailPage({
                         {contract.utilization}%
                       </span>
                     </div>
-                  </div>
+                  </div> */}
 
-                  {contract.performanceMetrics.onTimeDelivery && (
+                  {/* {contract.performanceMetrics.onTimeDelivery && (
                     <div>
                       <Label className="text-sm font-medium">
                         Performance Metrics
@@ -1423,7 +1584,7 @@ export default function SellerApplicationDetailPage({
                         </div>
                       </div>
                     </div>
-                  )}
+                  )} */}
 
                   <div>
                     <Label className="text-sm font-medium">Key Terms</Label>
@@ -1488,36 +1649,36 @@ export default function SellerApplicationDetailPage({
               <div className="grid gap-4 md:grid-cols-5">
                 <div className="text-center p-4 bg-blue-50 rounded-lg">
                   <div className="text-2xl font-bold text-blue-600">
-                    {financingStats.total}
+                    {apiData?.result?.invoices?.totalCount || 0}
                   </div>
                   <div className="text-sm text-blue-700">Total Requests</div>
                 </div>
                 <div className="text-center p-4 bg-green-50 rounded-lg">
                   <div className="text-2xl font-bold text-green-600">
-                    {financingStats.approved}
+                    {apiData?.result?.invoices?.active_invoices || 0}
                   </div>
-                  <div className="text-sm text-green-700">Approved</div>
+                  <div className="text-sm text-green-700">Active Invoices</div>
                 </div>
                 <div className="text-center p-4 bg-purple-50 rounded-lg">
                   <div className="text-2xl font-bold text-purple-600">
-                    {formatCurrency(
-                      financingStats.totalAmount,
-                      mockApplication.currency
-                    )}
+                    ${apiData?.result?.invoices?.total_funded || 0}
                   </div>
-                  <div className="text-sm text-purple-700">Total Amount</div>
+                  <div className="text-sm text-purple-700">Total Funded</div>
                 </div>
                 <div className="text-center p-4 bg-orange-50 rounded-lg">
                   <div className="text-2xl font-bold text-orange-600">
-                    {financingStats.approvalRate}%
+                    {apiData?.result?.invoices?.avg_approval_percentage || 0}%
                   </div>
                   <div className="text-sm text-orange-700">Approval Rate</div>
                 </div>
                 <div className="text-center p-4 bg-yellow-50 rounded-lg">
                   <div className="text-2xl font-bold text-yellow-600">
-                    {financingStats.avgRiskScore}%
+                    {apiData?.result?.invoices?.average_processing_time || 0}{" "}
+                    days
                   </div>
-                  <div className="text-sm text-yellow-700">Avg Risk Score</div>
+                  <div className="text-sm text-yellow-700">
+                    Avg Processing Time
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -1525,9 +1686,9 @@ export default function SellerApplicationDetailPage({
 
           {/* Financing Request Details */}
           <div className="grid gap-6">
-            {mockApplication.financingRequests.map((request) => (
+            {apiData?.result?.invoices?.data.map((invoice) => (
               <Card
-                key={request.id}
+                key={invoice._id}
                 className="hover:shadow-md transition-shadow duration-200"
               >
                 <CardHeader>
@@ -1535,17 +1696,18 @@ export default function SellerApplicationDetailPage({
                     <div>
                       <CardTitle className="flex items-center gap-2">
                         <DollarSign className="h-5 w-5" />
-                        {request.id}
+                        {invoice._id}
                       </CardTitle>
                       <CardDescription>
-                        {request.invoiceNumber} • {request.buyer} •{" "}
-                        {request.productCategory}
+                        {invoice.invoice_number} •{" "}
+                        {invoice.buyers_id?.buyer_company_name || "No buyer"} •{" "}
+                        {invoice.product_category || "No category"}
                       </CardDescription>
                     </div>
                     <div className="flex items-center gap-2">
-                      {getStatusBadge(request.status)}
+                      {getStatusBadge(invoice.status)}
                       <Badge variant="outline" className="text-xs">
-                        {request.advanceRate}% Advance
+                        {invoice.requested_advance_rate || 0}% Advance
                       </Badge>
                     </div>
                   </div>
@@ -1558,8 +1720,8 @@ export default function SellerApplicationDetailPage({
                       </Label>
                       <p className="text-lg font-semibold">
                         {formatCurrency(
-                          request.invoiceAmount,
-                          request.currency
+                          invoice.invoice_amount,
+                          invoice.currency
                         )}
                       </p>
                     </div>
@@ -1569,23 +1731,23 @@ export default function SellerApplicationDetailPage({
                       </Label>
                       <p className="text-lg font-semibold text-blue-600">
                         {formatCurrency(
-                          request.requestedAmount,
-                          request.currency
+                          invoice.requested_financing_amount,
+                          invoice.currency
                         )}
                       </p>
                     </div>
                     <div>
                       <Label className="text-sm font-medium">
-                        Submission Date
+                        Invoice Date
                       </Label>
                       <p className="text-sm text-muted-foreground">
-                        {formatDate(request.submissionDate)}
+                        {formatDate(invoice.invoice_date)}
                       </p>
                     </div>
                     <div>
                       <Label className="text-sm font-medium">Due Date</Label>
                       <p className="text-sm text-muted-foreground">
-                        {formatDate(request.dueDate)}
+                        {formatDate(invoice.due_date)}
                       </p>
                     </div>
                   </div>
@@ -1593,12 +1755,12 @@ export default function SellerApplicationDetailPage({
                   <div>
                     <Label className="text-sm font-medium">Description</Label>
                     <p className="text-sm text-muted-foreground">
-                      {request.description}
+                      {invoice.invoice_description || "No description"}
                     </p>
                   </div>
 
                   <div className="grid gap-4 md:grid-cols-2">
-                    <div>
+                    {/* <div>
                       <Label className="text-sm font-medium">
                         Risk Assessment
                       </Label>
@@ -1611,8 +1773,8 @@ export default function SellerApplicationDetailPage({
                           {request.riskScore}%
                         </span>
                       </div>
-                    </div>
-                    <div>
+                    </div> */}
+                    {/* <div>
                       <Label className="text-sm font-medium">
                         AI Validation Score
                       </Label>
@@ -1625,66 +1787,81 @@ export default function SellerApplicationDetailPage({
                           {request.aiValidationScore}%
                         </span>
                       </div>
-                    </div>
+                    </div> */}
                   </div>
 
-                  {/* Timeline for completed/approved requests */}
-                  {(request.status === "approved" ||
-                    request.status === "completed") && (
+                  {/* Timeline */}
+                  {invoice.timeline && (
                     <div>
                       <Label className="text-sm font-medium">
                         Transaction Timeline
                       </Label>
-                      <div className="grid gap-2 md:grid-cols-3 mt-2">
-                        {request.approvalDate && (
-                          <div className="text-center p-2 bg-green-50 rounded">
-                            <div className="text-sm font-medium text-green-700">
-                              Approved
+                      <div className="grid gap-2 md:grid-cols-4 mt-2">
+                        {invoice.timeline.steps.map((step, index) => (
+                          <div
+                            key={index}
+                            className={`text-center p-2 ${
+                              step.status === "Completed" ||
+                              step.status === "completed"
+                                ? "bg-green-50"
+                                : step.status === "Pending"
+                                ? "bg-yellow-50"
+                                : "bg-blue-50"
+                            } rounded`}
+                          >
+                            <div
+                              className={`text-sm font-medium ${
+                                step.status === "Completed" ||
+                                step.status === "completed"
+                                  ? "text-green-700"
+                                  : step.status === "Pending"
+                                  ? "text-yellow-700"
+                                  : "text-blue-700"
+                              }`}
+                            >
+                              {step.name}
                             </div>
-                            <div className="text-xs text-green-600">
-                              {formatDate(request.approvalDate)}
+                            <div
+                              className={`text-xs ${
+                                step.status === "Completed" ||
+                                step.status === "completed"
+                                  ? "text-green-600"
+                                  : step.status === "Pending"
+                                  ? "text-yellow-600"
+                                  : "text-blue-600"
+                              }`}
+                            >
+                              {step.date ? formatDate(step.date) : "Pending"}
                             </div>
                           </div>
-                        )}
-                        {request.disbursementDate && (
-                          <div className="text-center p-2 bg-blue-50 rounded">
-                            <div className="text-sm font-medium text-blue-700">
-                              Disbursed
-                            </div>
-                            <div className="text-xs text-blue-600">
-                              {formatDate(request.disbursementDate)}
-                            </div>
-                          </div>
-                        )}
-                        {request.collectionDate && (
-                          <div className="text-center p-2 bg-purple-50 rounded">
-                            <div className="text-sm font-medium text-purple-700">
-                              Collected
-                            </div>
-                            <div className="text-xs text-purple-600">
-                              {formatDate(request.collectionDate)}
-                            </div>
-                          </div>
-                        )}
+                        ))}
                       </div>
                     </div>
                   )}
 
                   <div className="flex items-center justify-between pt-2">
                     <div className="text-sm text-muted-foreground">
-                      Payment Terms: {request.paymentTerms}
+                      Payment Terms: {invoice.payment_terms || "-"}
                     </div>
                     <div className="flex gap-2">
                       <Button variant="outline" size="sm" asChild>
-                        <Link href={`/admin/financing/requests/${request.id}`}>
+                        <Link href={`/admin/financing/requests/${invoice._id}`}>
                           <Eye className="h-4 w-4 mr-2" />
                           View Details
                         </Link>
                       </Button>
-                      <Button variant="outline" size="sm">
-                        <Download className="h-4 w-4 mr-2" />
-                        Download Invoice
-                      </Button>
+                      {invoice.invoice_documents?.fcr && (
+                        <Button variant="outline" size="sm" asChild>
+                          <a
+                            href={`${BASE_URL}/${invoice.invoice_documents.fcr}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <Download className="h-4 w-4 mr-2" />
+                            Download Invoice
+                          </a>
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </CardContent>
@@ -1707,46 +1884,228 @@ export default function SellerApplicationDetailPage({
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {mockApplication.documents.map((doc, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between p-3 border rounded-lg"
-                  >
-                    <div className="flex items-center gap-3">
-                      <FileText className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{doc.name}</span>
-                          {doc.required && (
-                            <Badge variant="outline" className="text-xs">
-                              Required
-                            </Badge>
-                          )}
-                          <Badge
-                            variant="outline"
-                            className="text-xs bg-blue-50 text-blue-700"
-                          >
-                            {doc.type.toUpperCase()}
-                          </Badge>
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {doc.uploadDate
-                            ? `Uploaded ${formatDate(doc.uploadDate)}`
-                            : "Not uploaded"}
-                        </div>
+                {/* Bank Statements */}
+                <div className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">Bank Statements</span>
+                        <Badge variant="outline" className="text-xs">
+                          Required
+                        </Badge>
+                        <Badge
+                          variant="outline"
+                          className="text-xs bg-blue-50 text-blue-700"
+                        >
+                          BANKING
+                        </Badge>
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {apiData?.result?.company?.bank_statements
+                          ? "Uploaded"
+                          : "Not uploaded"}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {getStatusBadge(doc.status)}
-                      {doc.status === "completed" && (
-                        <Button variant="outline" size="sm">
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {getStatusBadge(
+                      apiData?.result?.company?.document_status || "pending"
+                    )}
+                    {apiData?.result?.company?.bank_statements && (
+                      <Button variant="outline" size="sm" asChild>
+                        <a
+                          href={`${BASE_URL}/${apiData.result.company.bank_statements}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
                           <Eye className="h-4 w-4 mr-2" />
                           View
-                        </Button>
-                      )}
+                        </a>
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Business Registration Certificate */}
+                <div className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">
+                          Business Registration Certificate
+                        </span>
+                        <Badge variant="outline" className="text-xs">
+                          Required
+                        </Badge>
+                        <Badge
+                          variant="outline"
+                          className="text-xs bg-blue-50 text-blue-700"
+                        >
+                          LEGAL
+                        </Badge>
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {apiData?.result?.company
+                          ?.business_registration_certificate
+                          ? "Uploaded"
+                          : "Not uploaded"}
+                      </div>
                     </div>
                   </div>
-                ))}
+                  <div className="flex items-center gap-2">
+                    {getStatusBadge(
+                      apiData?.result?.company?.document_status || "pending"
+                    )}
+                    {apiData?.result?.company
+                      ?.business_registration_certificate && (
+                      <Button variant="outline" size="sm" asChild>
+                        <a
+                          href={`${BASE_URL}/${apiData.result.company.business_registration_certificate}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          View
+                        </a>
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Financial Statements */}
+                <div className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">
+                          Financial Statements
+                        </span>
+                        <Badge variant="outline" className="text-xs">
+                          Required
+                        </Badge>
+                        <Badge
+                          variant="outline"
+                          className="text-xs bg-blue-50 text-blue-700"
+                        >
+                          FINANCIAL
+                        </Badge>
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {apiData?.result?.company?.financial_statements
+                          ? "Uploaded"
+                          : "Not uploaded"}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {getStatusBadge(
+                      apiData?.result?.company?.document_status || "pending"
+                    )}
+                    {apiData?.result?.company?.financial_statements && (
+                      <Button variant="outline" size="sm" asChild>
+                        <a
+                          href={`${BASE_URL}/${apiData.result.company.financial_statements}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          View
+                        </a>
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Tax Registration Documents */}
+                <div className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">
+                          Tax Registration Documents
+                        </span>
+                        <Badge variant="outline" className="text-xs">
+                          Required
+                        </Badge>
+                        <Badge
+                          variant="outline"
+                          className="text-xs bg-blue-50 text-blue-700"
+                        >
+                          TAX
+                        </Badge>
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {apiData?.result?.company?.tax_registration_documents
+                          ? "Uploaded"
+                          : "Not uploaded"}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {getStatusBadge(
+                      apiData?.result?.company?.document_status || "pending"
+                    )}
+                    {apiData?.result?.company?.tax_registration_documents && (
+                      <Button variant="outline" size="sm" asChild>
+                        <a
+                          href={`${BASE_URL}/${apiData.result.company.tax_registration_documents}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          View
+                        </a>
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Verification Image */}
+                <div className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">Verification Image</span>
+                        <Badge variant="outline" className="text-xs">
+                          Required
+                        </Badge>
+                        <Badge
+                          variant="outline"
+                          className="text-xs bg-blue-50 text-blue-700"
+                        >
+                          VERIFICATION
+                        </Badge>
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {apiData?.result?.company?.verification_image
+                          ? "Uploaded"
+                          : "Not uploaded"}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {getStatusBadge(
+                      apiData?.result?.company?.document_status || "pending"
+                    )}
+                    {apiData?.result?.company?.verification_image && (
+                      <Button variant="outline" size="sm" asChild>
+                        <a
+                          href={`${BASE_URL}/${apiData.result.company.verification_image}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          View
+                        </a>
+                      </Button>
+                    )}
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>

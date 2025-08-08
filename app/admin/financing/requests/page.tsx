@@ -733,7 +733,7 @@ export default function FinancingRequestsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-5">
+          <div className="grid gap-4 md:grid-cols-3">
             <div className="md:col-span-2">
               <Label htmlFor="search">Search</Label>
               <div className="relative">
@@ -763,7 +763,7 @@ export default function FinancingRequestsPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div>
+            {/* <div>
               <Label htmlFor="priority">Priority</Label>
               <Select value={priorityFilter} onValueChange={setPriorityFilter}>
                 <SelectTrigger>
@@ -790,7 +790,7 @@ export default function FinancingRequestsPage() {
                   <SelectItem value="high">High Risk</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
+            </div> */}
           </div>
         </CardContent>
       </Card>
@@ -809,7 +809,7 @@ export default function FinancingRequestsPage() {
                 {searchTerm && ` matching "${searchTerm}"`}
               </CardDescription>
             </div>
-            <Tabs
+            {/* <Tabs
               value={activeTab}
               onValueChange={setActiveTab}
               className="w-auto"
@@ -834,7 +834,7 @@ export default function FinancingRequestsPage() {
                   Hold ({stats.onHold})
                 </TabsTrigger>
               </TabsList>
-            </Tabs>
+            </Tabs> */}
           </div>
         </CardHeader>
         <CardContent className="p-0">

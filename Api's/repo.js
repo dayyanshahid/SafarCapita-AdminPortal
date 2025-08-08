@@ -8,3 +8,5 @@ export const getCompanyListApiCall =
 export const updateCompanyStatusApiCall =
   process.env.NEXT_PUBLIC_API_BASE_URL +
   "safar-capital/api/company/update-status";
+export const getCompanyDetailById =
+  process.env.NEXT_PUBLIC_API_BASE_URL + "safar-capital/api/company/get";
