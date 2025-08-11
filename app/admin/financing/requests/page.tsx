@@ -1,6 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useToast } from "@/components/ui/use-toast";
+import makeRequest from "@/Api's/ApiHelper";
+import {
+  getAllFinancingRequestsApiCall,
+  UpdateFinancingRequestStatusApiCall,
+} from "@/Api's/repo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -62,7 +68,77 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-// Enhanced mock data with more realistic trade finance scenarios
+// API Response Interface
+interface FinancingRequestResponse {
+  response_code: number;
+  success: boolean;
+  status_code: number;
+  total_records: number;
+  page_number: number;
+  total_pages: number;
+  message: string;
+  result: {
+    data: FinancingRequest[];
+    totalCount: number;
+    stats: {
+      total_requested_financing: number;
+      approval_rate: number;
+    };
+  };
+}
+
+interface FinancingRequest {
+  _id: string;
+  invoice_number: string;
+  purchase_order_number: string;
+  invoice_date: string;
+  due_date: string;
+  delivery_date: string;
+  invoice_amount: number;
+  currency: string;
+  payment_terms: string;
+  invoice_description: string;
+  order_number: string;
+  incoterms: string;
+  port_of_loading: string;
+  port_of_discharge: string;
+  shipment_information: string;
+  product_description: string;
+  product_category: string;
+  unit_of_measure: string;
+  quantity: number;
+  unit_price: number;
+  total_weight_kg: number;
+  requested_financing_amount: number;
+  requested_advance_rate: number;
+  repayment_period: string;
+  status: string;
+  action_type: number;
+  createdAt: string;
+  updatedAt: string;
+  company: {
+    _id: string;
+    legal_company_name: string;
+    business_type: string;
+    document_status: string;
+  };
+  employee: {
+    _id: string;
+    first_name: string;
+    last_name: string;
+    job_title: string;
+  };
+  timeline: {
+    steps: {
+      name: string;
+      status: string;
+      date: string | null;
+      description: string;
+    }[];
+  };
+}
+
+// Mock data for fallback
 const mockRequests = [
   {
     id: "FR-2024-001",
@@ -350,23 +426,23 @@ const mockRequests = [
 
 const getStatusBadge = (status: string) => {
   const statusConfig = {
-    pending_review: {
-      label: "Pending Review",
+    Pending: {
+      label: "Pending",
       color:
         "bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100",
       icon: Clock,
     },
     under_review: {
-      label: "Under Review",
+      label: "Delivered",
       color: "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100",
       icon: Eye,
     },
-    approved: {
+    Approved: {
       label: "Approved",
       color: "bg-green-50 text-green-700 border-green-200 hover:bg-green-100",
       icon: CheckCircle,
     },
-    rejected: {
+    Rejected: {
       label: "Rejected",
       color: "bg-red-50 text-red-700 border-red-200 hover:bg-red-100",
       icon: XCircle,
@@ -380,8 +456,7 @@ const getStatusBadge = (status: string) => {
   };
 
   const config =
-    statusConfig[status as keyof typeof statusConfig] ||
-    statusConfig.pending_review;
+    statusConfig[status as keyof typeof statusConfig] || statusConfig.Pending;
   const Icon = config.icon;
 
   return (
@@ -448,6 +523,13 @@ const formatDate = (dateString: string) => {
   });
 };
 
+const getCompanyInitials = (companyName: string) => {
+  return companyName
+    .split(" ")
+    .map((word) => word[0].toLowerCase())
+    .join("");
+};
+
 const formatRelativeTime = (dateString: string) => {
   const now = new Date();
   const date = new Date(dateString);
@@ -463,14 +545,115 @@ const formatRelativeTime = (dateString: string) => {
 };
 
 export default function FinancingRequestsPage() {
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [riskFilter, setRiskFilter] = useState("all");
   const [activeTab, setActiveTab] = useState("all");
-  const [sortField, setSortField] = useState<string>("submissionDate");
+  const [sortField, setSortField] = useState<string>("createdAt");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [viewMode, setViewMode] = useState<"table" | "cards">("table");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [financingData, setFinancingData] =
+    useState<FinancingRequestResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState<{
+    id: string;
+    status: string;
+  } | null>(null);
+  const itemsPerPage = 10;
+
+  // Loading overlay component
+  const LoadingOverlay = () => (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+      <div className="bg-white rounded-lg p-6 flex flex-col items-center gap-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-red-600 border-t-transparent"></div>
+        <p className="text-lg font-medium">Loading...</p>
+      </div>
+    </div>
+  );
+
+  const handleUpdateStatus = async (
+    requestId: string,
+    newStatus: "Approved" | "Rejected"
+  ) => {
+    try {
+      setIsUpdatingStatus({ id: requestId, status: newStatus });
+      setIsLoading(true); // Show main loader
+
+      // Show loading toast
+      toast({
+        title: `${
+          newStatus === "Approved" ? "Approving" : "Rejecting"
+        } Request...`,
+        description: "Please wait while we process your request.",
+      });
+
+      const response = await makeRequest({
+        url: UpdateFinancingRequestStatusApiCall,
+        method: "POST",
+        data: {
+          _id: requestId,
+          status: newStatus,
+        },
+      });
+
+      if (response.data.success) {
+        // Show success toast
+        toast({
+          title: "Success!",
+          description: `Request has been ${
+            newStatus === "Approved" ? "approved" : "rejected"
+          } successfully.`,
+          variant: "success",
+        });
+
+        // Refresh the data
+        const refreshResponse = await makeRequest<FinancingRequestResponse>({
+          url: getAllFinancingRequestsApiCall,
+          method: "GET",
+        });
+
+        if (refreshResponse.data.success) {
+          setFinancingData(refreshResponse.data);
+        }
+      }
+    } catch (error) {
+      console.error("Error updating status:", error);
+      // Show error toast
+      toast({
+        title: "Error",
+        description: "Failed to update request status. Please try again.",
+        variant: "error",
+      });
+    } finally {
+      setIsLoading(false); // Hide main loader
+      setIsUpdatingStatus(null);
+    }
+  };
+
+  const fetchFinancingRequests = async () => {
+    try {
+      setIsLoading(true);
+      const response = await makeRequest<FinancingRequestResponse>({
+        url: getAllFinancingRequestsApiCall,
+        method: "GET",
+      });
+
+      if (response.data.success) {
+        setFinancingData(response.data);
+      }
+    } catch (error) {
+      console.error("Error fetching financing requests:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchFinancingRequests();
+  }, []);
 
   const handleSort = (field: string) => {
     if (sortField === field) {
@@ -481,41 +664,32 @@ export default function FinancingRequestsPage() {
     }
   };
 
-  const filteredRequests = mockRequests
+  // Filter and paginate the requests
+  const filteredRequests = (financingData?.result.data || [])
     .filter((request) => {
       const matchesSearch =
-        request.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        request.buyer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        request.invoiceNumber
+        request.company.legal_company_name
           .toLowerCase()
           .includes(searchTerm.toLowerCase()) ||
-        request.productCategory
+        request.invoice_number
           .toLowerCase()
           .includes(searchTerm.toLowerCase()) ||
-        request.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        request.contactPerson.toLowerCase().includes(searchTerm.toLowerCase());
+        request.product_category
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
+        request._id.toLowerCase().includes(searchTerm.toLowerCase());
 
       const matchesStatus =
         statusFilter === "all" || request.status === statusFilter;
-      const matchesPriority =
-        priorityFilter === "all" || request.priority === priorityFilter;
-      const matchesRisk =
-        riskFilter === "all" || request.riskLevel === riskFilter;
       const matchesTab = activeTab === "all" || request.status === activeTab;
 
-      return (
-        matchesSearch &&
-        matchesStatus &&
-        matchesPriority &&
-        matchesRisk &&
-        matchesTab
-      );
+      return matchesSearch && matchesStatus && matchesTab;
     })
     .sort((a, b) => {
       let aValue: any = a[sortField as keyof typeof a];
       let bValue: any = b[sortField as keyof typeof b];
 
-      if (sortField === "submissionDate" || sortField === "lastActivity") {
+      if (sortField === "createdAt" || sortField === "updatedAt") {
         aValue = new Date(aValue).getTime();
         bValue = new Date(bValue).getTime();
       }
@@ -533,26 +707,28 @@ export default function FinancingRequestsPage() {
     });
 
   const stats = {
-    total: mockRequests.length,
-    pending: mockRequests.filter((r) => r.status === "pending_review").length,
-    underReview: mockRequests.filter((r) => r.status === "under_review").length,
-    approved: mockRequests.filter((r) => r.status === "approved").length,
-    rejected: mockRequests.filter((r) => r.status === "rejected").length,
-    onHold: mockRequests.filter((r) => r.status === "on_hold").length,
-    totalValue: mockRequests.reduce((sum, r) => sum + r.requestedAmount, 0),
-    avgProcessingTime: Math.round(
-      mockRequests.reduce((sum, r) => sum + r.daysInProcess, 0) /
-        mockRequests.length
-    ),
-    highRisk: mockRequests.filter((r) => r.riskLevel === "high").length,
-    avgAIScore: Math.round(
-      mockRequests.reduce((sum, r) => sum + r.aiValidationScore, 0) /
-        mockRequests.length
-    ),
+    total: financingData?.result.totalCount || 0,
+    pending:
+      financingData?.result.data.filter((r) => r.status === "Pending").length ||
+      0,
+    underReview:
+      financingData?.result.data.filter((r) => r.status === "Under Review")
+        .length || 0,
+    approved:
+      financingData?.result.data.filter((r) => r.status === "Approved")
+        .length || 0,
+    rejected:
+      financingData?.result.data.filter((r) => r.status === "Rejected")
+        .length || 0,
+    onHold:
+      financingData?.result.data.filter((r) => r.status === "Hold").length || 0,
+    totalValue: financingData?.result.stats.total_requested_financing || 0,
+    approvalRate: financingData?.result.stats.approval_rate || 0,
   };
 
   return (
     <div className="flex-1 space-y-6 p-6">
+      {isLoading && <LoadingOverlay />}
       {/* Enhanced Header */}
       <div className="flex items-center justify-between">
         <div className="space-y-1">
@@ -615,7 +791,7 @@ export default function FinancingRequestsPage() {
       </div>
 
       {/* Enhanced Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Card className="hover:shadow-md transition-shadow duration-200">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -639,7 +815,7 @@ export default function FinancingRequestsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {formatCurrency(stats.totalValue, "USD")}
+              {formatCurrency(stats?.totalValue, "USD")}
             </div>
             <p className="text-xs text-muted-foreground">Requested financing</p>
           </CardContent>
@@ -652,16 +828,13 @@ export default function FinancingRequestsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {Math.round(
-                (stats.approved / (stats.approved + stats.rejected)) * 100
-              )}
-              %
+              {stats?.approvalRate}%
             </div>
             <p className="text-xs text-muted-foreground">Last 30 days</p>
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-md transition-shadow duration-200">
+        {/* <Card className="hover:shadow-md transition-shadow duration-200">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Avg Processing
@@ -674,7 +847,7 @@ export default function FinancingRequestsPage() {
             </div>
             <p className="text-xs text-muted-foreground">Average time</p>
           </CardContent>
-        </Card>
+        </Card> */}
 
         {/* <Card className="hover:shadow-md transition-shadow duration-200">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -755,11 +928,11 @@ export default function FinancingRequestsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="pending_review">Pending Review</SelectItem>
-                  <SelectItem value="under_review">Under Review</SelectItem>
-                  <SelectItem value="approved">Approved</SelectItem>
-                  <SelectItem value="rejected">Rejected</SelectItem>
-                  <SelectItem value="on_hold">On Hold</SelectItem>
+                  <SelectItem value="Pending">Pending</SelectItem>
+                  <SelectItem value="Active">Active</SelectItem>
+                  <SelectItem value="Approved">Approved</SelectItem>
+                  <SelectItem value="Rejected">Rejected</SelectItem>
+                  <SelectItem value="Hold">Hold</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -907,7 +1080,7 @@ export default function FinancingRequestsPage() {
                           ))}
                       </Button>
                     </TableHead>
-                    <TableHead>
+                    {/* <TableHead>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -922,276 +1095,358 @@ export default function FinancingRequestsPage() {
                             <SortDesc className="ml-2 h-4 w-4" />
                           ))}
                       </Button>
-                    </TableHead>
+                    </TableHead> */}
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredRequests.map((request) => (
-                    <TableRow
-                      key={request.id}
-                      className="hover:bg-muted/50 transition-colors duration-150"
-                    >
-                      <TableCell>
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-sm">
-                              {request.id}
-                            </span>
-                            <Badge
-                              variant="outline"
-                              className="text-xs bg-gray-50"
-                            >
-                              {request.companyId}
-                            </Badge>
-                          </div>
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-1 text-sm">
-                              <Building2 className="h-3 w-3 text-muted-foreground" />
-                              <span className="font-medium">
-                                {request.company}
+                  {filteredRequests
+                    .slice(
+                      (currentPage - 1) * itemsPerPage,
+                      currentPage * itemsPerPage
+                    )
+                    .map((request) => (
+                      <TableRow
+                        key={request._id}
+                        className="hover:bg-muted/50 transition-colors duration-150"
+                      >
+                        <TableCell>
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-sm">
+                                FR- {request.invoice_number}
                               </span>
+                              <Badge
+                                variant="outline"
+                                className="text-xs bg-gray-50"
+                              >
+                                {getCompanyInitials(
+                                  request.company.legal_company_name
+                                )}
+                                -{request.invoice_number}
+                              </Badge>
                             </div>
-                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                              <Users className="h-3 w-3" />
-                              {request.buyer} ({request.buyerCountry})
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-1 text-sm">
+                                <Building2 className="h-3 w-3 text-muted-foreground" />
+                                <span className="font-medium">
+                                  {request.company.legal_company_name}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                <Users className="h-3 w-3" />
+                                {request.employee.first_name}{" "}
+                                {request.employee.last_name}
+                              </div>
                             </div>
                             <div className="text-xs text-muted-foreground">
-                              Contact: {request.contactPerson}
+                              Invoice: {request.invoice_number} | PO:{" "}
+                              {request.purchase_order_number}
                             </div>
                           </div>
-                          <div className="text-xs text-muted-foreground">
-                            Invoice: {request.invoiceNumber} | PO:{" "}
-                            {request.poNumber}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-1 text-sm font-medium">
-                            <Package className="h-3 w-3 text-muted-foreground" />
-                            {request.productCategory}
-                          </div>
-                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                            <Ship className="h-3 w-3" />
-                            {request.tradeRoute}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {request.incoterms} |{" "}
-                            {request.quantity.toLocaleString()}{" "}
-                            {request.unitOfMeasure}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            Weight: {request.totalWeight.toLocaleString()} kg
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="space-y-2">
-                          <div className="font-medium text-lg">
-                            {formatCurrency(
-                              request.requestedAmount,
-                              request.currency
-                            )}
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            of{" "}
-                            {formatCurrency(
-                              request.invoiceAmount,
-                              request.currency
-                            )}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {request.advanceRate}% advance •{" "}
-                            {request.repaymentPeriod}d repayment
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            Due: {formatDate(request.dueDate)}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="space-y-3">
-                          {getStatusBadge(request.status)}
-
+                        </TableCell>
+                        <TableCell>
                           <div className="space-y-2">
+                            <div className="flex items-center gap-1 text-sm font-medium">
+                              <Package className="h-3 w-3 text-muted-foreground" />
+                              {request.product_category}
+                            </div>
+                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                              <Ship className="h-3 w-3" />
+                              {request.port_of_loading} →{" "}
+                              {request.port_of_discharge}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {request.incoterms} |{" "}
+                              {request.quantity.toLocaleString()}{" "}
+                              {request.unit_of_measure}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Weight: {request.total_weight_kg.toLocaleString()}{" "}
+                              kg
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-2">
+                            <div className="font-medium text-lg">
+                              {formatCurrency(
+                                request.requested_financing_amount,
+                                request.currency
+                              )}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              of{" "}
+                              {formatCurrency(
+                                request.invoice_amount,
+                                request.currency
+                              )}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {request.requested_advance_rate}% advance •{" "}
+                              {request.repayment_period}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Due: {formatDate(request.due_date)}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-3">
+                            {getStatusBadge(request.status)}
+
+                            {/* <div className="space-y-2">
                             <div className="flex items-center justify-between text-xs">
                               <span>Documents</span>
                               <span className="font-medium">
-                                {request.documentsComplete}%
+                                {request.company.document_status}
                               </span>
                             </div>
-                            <Progress
-                              value={request.documentsComplete}
-                              className="h-1.5"
-                            />
-                          </div>
+                          </div> */}
 
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between text-xs">
-                              <span>AI Validation</span>
-                              <span className="font-medium">
-                                {request.aiValidationScore}%
-                              </span>
+                            <div className="text-xs text-muted-foreground">
+                              Created: {formatDate(request.createdAt)}
                             </div>
-                            <Progress
-                              value={request.aiValidationScore}
-                              className="h-1.5"
-                            />
                           </div>
-
-                          {getRiskBadge(request.riskLevel, request.riskScore)}
-
-                          <div className="text-xs text-muted-foreground">
-                            {request.daysInProcess} days in process
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
+                        </TableCell>
+                        {/* assignment tab here  */}
+                        {/* <TableCell>
                         <div className="space-y-1">
                           <div className="text-sm font-medium">
-                            {request.assignedTo}
+                            {request.employee.first_name}{" "}
+                            {request.employee.last_name}
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            Submitted {formatDate(request.submissionDate)}
+                            {request.employee.job_title}
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            Updated {formatRelativeTime(request.lastActivity)}
+                            Updated: {formatDate(request.updatedAt)}
                           </div>
                         </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center gap-2 justify-end">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            asChild
-                            className="hover:bg-blue-50 bg-transparent"
-                          >
-                            <Link
-                              href={`/admin/financing/requests/${request.id}`}
+                      </TableCell> */}
+                        <TableCell className="text-right">
+                          <div className="flex items-center gap-2 justify-end">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              asChild
+                              className="hover:bg-blue-50 bg-transparent"
                             >
-                              <Eye className="h-4 w-4 mr-2" />
-                              Review
-                            </Link>
-                          </Button>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="outline" size="sm">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem>
-                                <CheckCircle className="h-4 w-4 mr-2" />
-                                Quick Approve
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <XCircle className="h-4 w-4 mr-2" />
-                                Quick Reject
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
+                              <Link
+                                href={`/admin/financing/requests/${request._id}`}
+                              >
+                                <Eye className="h-4 w-4 mr-2" />
+                                Review
+                              </Link>
+                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="sm">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    handleUpdateStatus(request._id, "Approved")
+                                  }
+                                  disabled={isUpdatingStatus !== null}
+                                >
+                                  {isUpdatingStatus?.id === request._id &&
+                                  isUpdatingStatus?.status === "Approved" ? (
+                                    <div className="flex items-center">
+                                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent mr-2" />
+                                      Approving...
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <CheckCircle className="h-4 w-4 mr-2" />
+                                      Quick Approve
+                                    </>
+                                  )}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    handleUpdateStatus(request._id, "Rejected")
+                                  }
+                                  disabled={isUpdatingStatus !== null}
+                                >
+                                  {isUpdatingStatus?.id === request._id &&
+                                  isUpdatingStatus?.status === "Rejected" ? (
+                                    <div className="flex items-center">
+                                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent mr-2" />
+                                      Rejecting...
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <XCircle className="h-4 w-4 mr-2" />
+                                      Quick Reject
+                                    </>
+                                  )}
+                                </DropdownMenuItem>
+                                {/* <DropdownMenuItem>
                                 <AlertTriangle className="h-4 w-4 mr-2" />
                                 Put on Hold
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
+                              </DropdownMenuItem> */}
+                                {/* <DropdownMenuItem>
                                 <Download className="h-4 w-4 mr-2" />
                                 Export Details
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                              </DropdownMenuItem> */}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
                 </TableBody>
               </Table>
+              <div className="flex justify-between items-center p-4 border-t">
+                <p className="text-sm text-muted-foreground">
+                  Showing{" "}
+                  {Math.min(
+                    (currentPage - 1) * itemsPerPage + 1,
+                    filteredRequests.length
+                  )}{" "}
+                  to{" "}
+                  {Math.min(
+                    currentPage * itemsPerPage,
+                    filteredRequests.length
+                  )}{" "}
+                  of {filteredRequests.length} entries
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.max(1, prev - 1))
+                    }
+                    disabled={currentPage === 1}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage((prev) => prev + 1)}
+                    disabled={
+                      currentPage * itemsPerPage >= filteredRequests.length
+                    }
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
             </div>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 p-6">
-              {filteredRequests.map((request) => (
-                <Card
-                  key={request.id}
-                  className="hover:shadow-lg transition-all duration-200 border-l-4 border-l-blue-500"
-                >
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold">{request.id}</span>
-                    </div>
-                    <div className="space-y-1">
-                      <div className="font-medium text-sm">
-                        {request.company}
+              {filteredRequests
+                .slice(
+                  (currentPage - 1) * itemsPerPage,
+                  currentPage * itemsPerPage
+                )
+                .map((request) => (
+                  <Card
+                    key={request._id}
+                    className="hover:shadow-lg transition-all duration-200 border-l-4 border-l-blue-500"
+                  >
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold">{request._id}</span>
                       </div>
-                      <div className="text-sm text-muted-foreground">
-                        {request.buyer}
+                      <div className="space-y-1">
+                        <div className="font-medium text-sm">
+                          {request.company.legal_company_name}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {request.employee.first_name}{" "}
+                          {request.employee.last_name}
+                        </div>
                       </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-lg font-bold">
-                        {formatCurrency(
-                          request.requestedAmount,
-                          request.currency
-                        )}
-                      </span>
-                      {getStatusBadge(request.status)}
-                    </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-lg font-bold">
+                          {formatCurrency(
+                            request.requested_financing_amount,
+                            request.currency
+                          )}
+                        </span>
+                        {getStatusBadge(request.status)}
+                      </div>
 
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-1 text-sm">
-                        <Package className="h-3 w-3 text-muted-foreground" />
-                        {request.productCategory}
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-1 text-sm">
+                          <Package className="h-3 w-3 text-muted-foreground" />
+                          {request.product_category}
+                        </div>
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                          <Ship className="h-3 w-3" />
+                          {request.port_of_loading} →{" "}
+                          {request.port_of_discharge}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <Ship className="h-3 w-3" />
-                        {request.tradeRoute}
-                      </div>
-                    </div>
 
-                    <div className="space-y-2">
+                      {/* <div className="space-y-2">
                       <div className="flex justify-between text-xs">
                         <span>Documents</span>
-                        <span>{request.documentsComplete}%</span>
+                        <span>{request.company.document_status}</span>
                       </div>
-                      <Progress
-                        value={request.documentsComplete}
-                        className="h-1.5"
-                      />
-                    </div>
+                    </div> */}
 
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-xs">
-                        <span>AI Score</span>
-                        <span>{request.aiValidationScore}%</span>
+                      <div className="flex items-center justify-between pt-2">
+                        <div className="text-xs text-muted-foreground">
+                          {request.employee.job_title}
+                        </div>
+                        <Button variant="outline" size="sm" asChild>
+                          <Link
+                            href={`/admin/financing/requests/${request._id}`}
+                          >
+                            <Eye className="h-4 w-4 mr-2" />
+                            Review
+                          </Link>
+                        </Button>
                       </div>
-                      <Progress
-                        value={request.aiValidationScore}
-                        className="h-1.5"
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      {getRiskBadge(request.riskLevel, request.riskScore)}
-                      <span className="text-xs text-muted-foreground">
-                        {request.daysInProcess}d in process
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-2">
-                      <div className="text-xs text-muted-foreground">
-                        {request.assignedTo}
-                      </div>
-                      <Button variant="outline" size="sm" asChild>
-                        <Link href={`/admin/financing/requests/${request.id}`}>
-                          <Eye className="h-4 w-4 mr-2" />
-                          Review
-                        </Link>
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                ))}
+              <div className="col-span-full flex justify-between items-center pt-4 border-t">
+                <p className="text-sm text-muted-foreground">
+                  Showing{" "}
+                  {Math.min(
+                    (currentPage - 1) * itemsPerPage + 1,
+                    filteredRequests.length
+                  )}{" "}
+                  to{" "}
+                  {Math.min(
+                    currentPage * itemsPerPage,
+                    filteredRequests.length
+                  )}{" "}
+                  of {filteredRequests.length} entries
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.max(1, prev - 1))
+                    }
+                    disabled={currentPage === 1}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage((prev) => prev + 1)}
+                    disabled={
+                      currentPage * itemsPerPage >= filteredRequests.length
+                    }
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
             </div>
           )}
         </CardContent>

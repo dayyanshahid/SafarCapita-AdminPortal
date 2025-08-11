@@ -1,7 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/components/ui/use-toast";
+import type { ApiResponse } from "@/Api's/types";
+import {
+  timeLineUpdateStepApiCall,
+  getInvoiceDetailByIdApiCall,
+} from "@/Api's/repo";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -576,7 +582,7 @@ const mockRequest = {
 
 const getStatusBadge = (status: string) => {
   const statusConfig = {
-    pending: {
+    Pending: {
       label: "Pending",
       color: "bg-gray-100 text-gray-800 border-gray-200",
       icon: Clock,
@@ -586,7 +592,7 @@ const getStatusBadge = (status: string) => {
       color: "bg-blue-100 text-blue-800 border-blue-200",
       icon: PlayCircle,
     },
-    completed: {
+    Completed: {
       label: "Completed",
       color: "bg-green-100 text-green-800 border-green-200",
       icon: CheckCircle,
@@ -604,7 +610,7 @@ const getStatusBadge = (status: string) => {
   };
 
   const config =
-    statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
+    statusConfig[status as keyof typeof statusConfig] || statusConfig.Pending;
   const Icon = config.icon;
 
   return (
@@ -710,6 +716,8 @@ const formatDateTime = (dateString: string) => {
   });
 };
 
+import { useSearchParams } from "next/navigation";
+
 const formatDetailedDateTime = (dateString: string) => {
   return new Date(dateString).toLocaleString("en-US", {
     weekday: "long",
@@ -721,13 +729,225 @@ const formatDetailedDateTime = (dateString: string) => {
   });
 };
 
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+
+interface RequestData {
+  _id: string;
+  invoice_number: string;
+  purchase_order_number: string;
+  invoice_date: string;
+  due_date: string;
+  delivery_date: string;
+  invoice_amount: number;
+  currency: string;
+  payment_terms: string;
+  invoice_description: string;
+  order_number: string;
+  incoterms: string;
+  port_of_loading: string;
+  port_of_discharge: string;
+  shipment_information: string;
+  product_description: string;
+  product_category: string;
+  unit_of_measure: string;
+  quantity: number;
+  unit_price: number;
+  total_weight_kg: number;
+  requested_financing_amount: number;
+  requested_advance_rate: number;
+  repayment_period: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  buyers_id: {
+    _id: string;
+    buyer_company_name: string;
+    registration_number: string;
+    contact_email: string;
+    contact_phone: string;
+    country: string;
+    buyer_address: string;
+    credit_limit: number;
+    status: string;
+    action_type: number;
+    createdAt: string;
+    updatedAt: string;
+  };
+  company_id: {
+    _id: string;
+    legal_company_name: string;
+    business_type: string;
+    website: string;
+    street_address: string;
+    city: string;
+    country: string;
+    phone_number: string;
+    zip_postal_code: string;
+  };
+  employee_id: {
+    _id: string;
+    first_name: string;
+    last_name: string;
+    job_title: string;
+    email_notifications: number;
+    department: string;
+  };
+  invoice_documents: {
+    fcr: string;
+    gd: string;
+    bill_of_lading: string;
+    packing_list: string;
+    _id: string;
+  };
+  timeline: {
+    _id: string;
+    invoice_id: string;
+    steps: Array<{
+      _id: string;
+      name: string;
+      status: string;
+      date: string | null;
+      description: string;
+    }>;
+    createdAt: string;
+    updatedAt: string;
+  };
+}
+
+import { use } from "react";
+import makeRequest from "@/Api's/ApiHelper";
+
 export default function FinancingRequestDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const resolvedParams = use(params);
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState("overview");
   const [newNote, setNewNote] = useState("");
+  const [requestData, setRequestData] = useState<RequestData | null>(null);
+  const [flagIssueStepId, setFlagIssueStepId] = useState<string | null>(null);
+  const [issueDescription, setIssueDescription] = useState("");
+  const [isUpdatingStep, setIsUpdatingStep] = useState<string | null>(null);
+  const { toast } = useToast();
+
+  const handleCompleteStep = async (stepId: string) => {
+    try {
+      setIsUpdatingStep(stepId);
+
+      const response = await makeRequest({
+        url: timeLineUpdateStepApiCall,
+        method: "POST",
+        data: {
+          invoice_id: requestData?._id,
+          step_id: stepId,
+          status: "Completed",
+        },
+      });
+
+      if (response.status === 200) {
+        toast({
+          title: "Success",
+          description: "Step has been completed successfully.",
+          variant: "success",
+        });
+
+        // Update local state to reflect the change
+        setRequestData((prev) => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            timeline: {
+              ...prev.timeline,
+              steps: prev.timeline.steps.map((step) =>
+                step._id === stepId ? { ...step, status: "Completed" } : step
+              ),
+            },
+          };
+        });
+      }
+    } catch (error) {
+      console.error("Error completing step:", error);
+      toast({
+        title: "Error",
+        description: "Failed to complete the step. Please try again.",
+        variant: "error",
+      });
+    } finally {
+      setIsUpdatingStep(null);
+    }
+  };
+
+  const canCompleteStep = (currentIndex: number): boolean => {
+    if (!requestData?.timeline?.steps) return false;
+
+    // First step can always be completed
+    if (currentIndex === 0) return true;
+
+    // For other steps, check if previous step is completed
+    const previousStep = requestData.timeline.steps[currentIndex - 1];
+    return previousStep?.status === "Completed";
+  };
+
+  const handleFlagIssue = (stepId: string) => {
+    if (flagIssueStepId === stepId) {
+      // Submit the issue
+      console.log(
+        "Submitting issue for step:",
+        stepId,
+        "Description:",
+        issueDescription
+      );
+      setFlagIssueStepId(null);
+      setIssueDescription("");
+    } else {
+      setFlagIssueStepId(stepId);
+    }
+  };
+
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchInvoiceDetails = async () => {
+      try {
+        setIsLoading(true);
+        const response = await makeRequest({
+          url: getInvoiceDetailByIdApiCall,
+          method: "GET",
+          params: { _id: resolvedParams.id },
+        });
+        debugger;
+        if (response.status === 200) {
+          setRequestData(response.data.result);
+        } else {
+          toast({
+            title: "Error",
+            description: "Failed to fetch invoice details.",
+            variant: "error",
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching invoice details:", error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch invoice details. Please try again.",
+          variant: "error",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (resolvedParams.id) {
+      fetchInvoiceDetails();
+    }
+  }, [resolvedParams.id, toast]);
+
+  const getDocumentUrl = (path: string) => {
+    if (!path) return "";
+    return `${BASE_URL}/${path}`;
+  };
 
   const calculateOverallProgress = () => {
     const completedStages = mockRequest.approvalStages.filter(
@@ -738,8 +958,19 @@ export default function FinancingRequestDetailPage({
     );
   };
 
+  // Loading overlay component
+  const LoadingOverlay = () => (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+      <div className="bg-white rounded-lg p-6 flex flex-col items-center gap-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
+        <p className="text-lg font-medium">Loading request details...</p>
+      </div>
+    </div>
+  );
+
   return (
     <div className="flex-1 space-y-6 p-6">
+      {isLoading && <LoadingOverlay />}
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -752,14 +983,15 @@ export default function FinancingRequestDetailPage({
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-3xl font-bold tracking-tight">
-                {mockRequest.id}
+                FR-{requestData?.invoice_number || "Loading..."}
               </h1>
-              {getStatusBadge(mockRequest.status)}
-              {getPriorityBadge(mockRequest.priority)}
+              {requestData && getStatusBadge(requestData.status)}
             </div>
             <p className="text-muted-foreground">
-              Submitted {formatDate(mockRequest.submissionDate)} • Last updated{" "}
-              {formatDate(mockRequest.lastUpdated)}
+              Submitted{" "}
+              {requestData ? formatDate(requestData.createdAt) : "Loading..."} •
+              Last updated{" "}
+              {requestData ? formatDate(requestData.updatedAt) : "Loading..."}
             </p>
           </div>
         </div>
@@ -776,7 +1008,7 @@ export default function FinancingRequestDetailPage({
       </div>
 
       {/* Quick Stats */}
-      <div className="grid gap-4 md:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -786,18 +1018,24 @@ export default function FinancingRequestDetailPage({
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {formatCurrency(
-                mockRequest.requestedAmount,
-                mockRequest.currency
-              )}
+              {requestData
+                ? formatCurrency(
+                    requestData.requested_financing_amount,
+                    requestData.currency
+                  )
+                : "Loading..."}
             </div>
             <p className="text-xs text-muted-foreground">
-              {mockRequest.advanceRate}% of{" "}
-              {formatCurrency(mockRequest.invoiceAmount, mockRequest.currency)}
+              {requestData
+                ? `${requestData.requested_advance_rate}% of ${formatCurrency(
+                    requestData.invoice_amount,
+                    requestData.currency
+                  )}`
+                : "Loading..."}
             </p>
           </CardContent>
         </Card>
-        <Card>
+        {/* <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Overall Progress
@@ -810,7 +1048,7 @@ export default function FinancingRequestDetailPage({
             </div>
             <Progress value={calculateOverallProgress()} className="mt-2" />
           </CardContent>
-        </Card>
+        </Card> */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Documents</CardTitle>
@@ -835,7 +1073,7 @@ export default function FinancingRequestDetailPage({
             <Progress value={mockRequest.aiValidationScore} className="mt-2" />
           </CardContent>
         </Card>
-        <Card>
+        {/* <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Processing Time
@@ -850,7 +1088,7 @@ export default function FinancingRequestDetailPage({
               Assigned to {mockRequest.assignedTo}
             </p>
           </CardContent>
-        </Card>
+        </Card> */}
       </div>
 
       {/* Main Content Tabs */}
@@ -885,13 +1123,13 @@ export default function FinancingRequestDetailPage({
                 <div>
                   <Label className="text-sm font-medium">Company Name</Label>
                   <p className="text-sm text-muted-foreground">
-                    {mockRequest.company}
+                    {requestData?.company_id.legal_company_name || "Loading..."}
                   </p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium">Company ID</Label>
                   <p className="text-sm text-muted-foreground">
-                    {mockRequest.companyId}
+                    {requestData?.company_id._id || "Loading..."}
                   </p>
                 </div>
                 <div>
@@ -900,16 +1138,20 @@ export default function FinancingRequestDetailPage({
                   </Label>
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Mail className="h-3 w-3" />
-                      {mockRequest.companyEmail}
+                      <Globe className="h-3 w-3" />
+                      {requestData?.company_id.website || "N/A"}
                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Phone className="h-3 w-3" />
-                      {mockRequest.companyPhone}
+                      {requestData?.company_id.phone_number || "N/A"}
                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <MapPin className="h-3 w-3" />
-                      {mockRequest.companyAddress}
+                      {requestData
+                        ? `${requestData.company_id.street_address}, ${
+                            requestData.company_id.city
+                          }, ${requestData.company_id.country.toUpperCase()}`
+                        : "Loading..."}
                     </div>
                   </div>
                 </div>
@@ -928,7 +1170,7 @@ export default function FinancingRequestDetailPage({
                 <div>
                   <Label className="text-sm font-medium">Buyer Company</Label>
                   <p className="text-sm text-muted-foreground">
-                    {mockRequest.buyer}
+                    {requestData?.buyers_id.buyer_company_name || "Loading..."}
                   </p>
                 </div>
                 <div>
@@ -936,7 +1178,7 @@ export default function FinancingRequestDetailPage({
                     Registration Number
                   </Label>
                   <p className="text-sm text-muted-foreground">
-                    {mockRequest.buyerRegistration}
+                    {requestData?.buyers_id.registration_number || "Loading..."}
                   </p>
                 </div>
                 <div>
@@ -946,25 +1188,31 @@ export default function FinancingRequestDetailPage({
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Mail className="h-3 w-3" />
-                      {mockRequest.buyerEmail}
+                      {requestData?.buyers_id.contact_email || "Loading..."}
                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Phone className="h-3 w-3" />
-                      {mockRequest.buyerPhone}
+                      {requestData?.buyers_id.contact_phone || "Loading..."}
                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Globe className="h-3 w-3" />
-                      {mockRequest.buyerCountry}
+                      {requestData?.buyers_id.country || "Loading..."}
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <MapPin className="h-3 w-3" />
+                      {requestData?.buyers_id.buyer_address || "Loading..."}
                     </div>
                   </div>
                 </div>
                 <div>
                   <Label className="text-sm font-medium">Credit Limit</Label>
                   <p className="text-sm text-muted-foreground">
-                    {formatCurrency(
-                      mockRequest.creditLimit,
-                      mockRequest.currency
-                    )}
+                    {requestData
+                      ? formatCurrency(
+                          requestData.buyers_id.credit_limit,
+                          requestData.currency
+                        )
+                      : "Loading..."}
                   </p>
                 </div>
               </CardContent>
@@ -987,10 +1235,12 @@ export default function FinancingRequestDetailPage({
                       Invoice Amount
                     </Label>
                     <p className="text-lg font-semibold">
-                      {formatCurrency(
-                        mockRequest.invoiceAmount,
-                        mockRequest.currency
-                      )}
+                      {requestData
+                        ? formatCurrency(
+                            requestData.invoice_amount,
+                            requestData.currency
+                          )
+                        : "Loading..."}
                     </p>
                   </div>
                   <div>
@@ -998,10 +1248,12 @@ export default function FinancingRequestDetailPage({
                       Requested Amount
                     </Label>
                     <p className="text-lg font-semibold text-blue-600">
-                      {formatCurrency(
-                        mockRequest.requestedAmount,
-                        mockRequest.currency
-                      )}
+                      {requestData
+                        ? formatCurrency(
+                            requestData.requested_financing_amount,
+                            requestData.currency
+                          )
+                        : "Loading..."}
                     </p>
                   </div>
                 </div>
@@ -1009,7 +1261,7 @@ export default function FinancingRequestDetailPage({
                   <div>
                     <Label className="text-sm font-medium">Advance Rate</Label>
                     <p className="text-sm text-muted-foreground">
-                      {mockRequest.advanceRate}%
+                      {requestData?.requested_advance_rate || "Loading..."}%
                     </p>
                   </div>
                   <div>
@@ -1017,14 +1269,14 @@ export default function FinancingRequestDetailPage({
                       Repayment Period
                     </Label>
                     <p className="text-sm text-muted-foreground">
-                      {mockRequest.repaymentPeriod} days
+                      {requestData?.repayment_period || "Loading..."}
                     </p>
                   </div>
                 </div>
                 <div>
                   <Label className="text-sm font-medium">Payment Terms</Label>
                   <p className="text-sm text-muted-foreground">
-                    {mockRequest.paymentTerms}
+                    {requestData?.payment_terms || "Loading..."}
                   </p>
                 </div>
               </CardContent>
@@ -1044,36 +1296,49 @@ export default function FinancingRequestDetailPage({
                     Product Description
                   </Label>
                   <p className="text-sm text-muted-foreground">
-                    {mockRequest.productDescription}
+                    {requestData?.product_description || "Loading..."}
                   </p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium">Category</Label>
                   <p className="text-sm text-muted-foreground">
-                    {mockRequest.productCategory}
+                    {requestData?.product_category
+                      .split("-")
+                      .map(
+                        (word) => word.charAt(0).toUpperCase() + word.slice(1)
+                      )
+                      .join(" ") || "Loading..."}
                   </p>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label className="text-sm font-medium">Quantity</Label>
                     <p className="text-sm text-muted-foreground">
-                      {mockRequest.quantity} {mockRequest.unitOfMeasure}
+                      {requestData
+                        ? `${requestData.quantity.toLocaleString()} ${
+                            requestData.unit_of_measure
+                          }`
+                        : "Loading..."}
                     </p>
                   </div>
                   <div>
                     <Label className="text-sm font-medium">Unit Price</Label>
                     <p className="text-sm text-muted-foreground">
-                      {formatCurrency(
-                        mockRequest.unitPrice,
-                        mockRequest.currency
-                      )}
+                      {requestData
+                        ? formatCurrency(
+                            requestData.unit_price,
+                            requestData.currency
+                          )
+                        : "Loading..."}
                     </p>
                   </div>
                 </div>
                 <div>
                   <Label className="text-sm font-medium">Total Weight</Label>
                   <p className="text-sm text-muted-foreground">
-                    {mockRequest.totalWeight.toLocaleString()} kg
+                    {requestData
+                      ? `${requestData.total_weight_kg.toLocaleString()} kg`
+                      : "Loading..."}
                   </p>
                 </div>
               </CardContent>
@@ -1081,7 +1346,7 @@ export default function FinancingRequestDetailPage({
           </div>
 
           {/* Financial Metrics */}
-          <Card>
+          {/* <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <TrendingUp className="h-5 w-5" />
@@ -1124,7 +1389,7 @@ export default function FinancingRequestDetailPage({
                 </div>
               </div>
             </CardContent>
-          </Card>
+          </Card> */}
         </TabsContent>
 
         {/* Approval Stages Tab */}
@@ -1147,33 +1412,57 @@ export default function FinancingRequestDetailPage({
                   <div className="flex items-center justify-between mb-2">
                     <span className="font-medium">Overall Progress</span>
                     <span className="text-sm text-muted-foreground">
-                      Stage {mockRequest.currentStage} of{" "}
-                      {mockRequest.approvalStages.length}
+                      {requestData?.timeline?.steps
+                        ? `Stage ${
+                            requestData.timeline.steps.filter(
+                              (step) => step.status === "Completed"
+                            ).length + 1
+                          } of ${requestData.timeline.steps.length}`
+                        : "Loading..."}
                     </span>
                   </div>
                   <Progress
-                    value={calculateOverallProgress()}
+                    value={
+                      requestData?.timeline?.steps
+                        ? (requestData.timeline.steps.filter(
+                            (step) => step.status === "Completed"
+                          ).length /
+                            requestData.timeline.steps.length) *
+                          100
+                        : 0
+                    }
                     className="h-2"
                   />
                   <div className="flex justify-between text-xs text-muted-foreground mt-1">
                     <span>Started</span>
-                    <span>{calculateOverallProgress()}% Complete</span>
+                    <span>
+                      {requestData?.timeline?.steps
+                        ? `${Math.round(
+                            (requestData.timeline.steps.filter(
+                              (step) => step.status === "Completed"
+                            ).length /
+                              requestData.timeline.steps.length) *
+                              100
+                          )}% Complete`
+                        : "Loading..."}
+                    </span>
                     <span>Completion</span>
                   </div>
                 </div>
 
                 {/* Approval Stages */}
                 <div className="space-y-4">
-                  {mockRequest.approvalStages.map((stage, index) => {
-                    const Icon = getStageIcon(stage.icon);
-                    const isActive = stage.status === "in_progress";
-                    const isCompleted = stage.status === "completed";
-                    const isPending = stage.status === "pending";
+                  {requestData?.timeline?.steps.map((step, index) => {
+                    const Icon = FileText; // Using FileText as default icon
+                    const isActive = step.status === "In Progress";
+                    const isCompleted = step.status === "Completed";
+                    const isPending = step.status === "Pending";
 
                     return (
-                      <div key={stage.id} className="relative">
+                      <div key={step._id} className="relative">
                         {/* Timeline line */}
-                        {index < mockRequest.approvalStages.length - 1 && (
+                        {index <
+                          (requestData?.timeline?.steps?.length || 0) - 1 && (
                           <div className="absolute left-6 top-16 w-0.5 h-20 bg-border"></div>
                         )}
 
@@ -1206,34 +1495,21 @@ export default function FinancingRequestDetailPage({
                             <div className="flex items-center justify-between mb-3">
                               <div className="flex items-center gap-3">
                                 <h3 className="text-lg font-semibold">
-                                  {stage.title}
+                                  {step.name}
                                 </h3>
-                                {getStatusBadge(stage.status)}
+                                {getStatusBadge(step.status)}
                               </div>
                               <div className="text-sm text-muted-foreground">
-                                {stage.timestamp
-                                  ? formatDetailedDateTime(stage.timestamp)
+                                {step.date
+                                  ? formatDetailedDateTime(step.date)
                                   : "Not started"}
                               </div>
                             </div>
 
                             <p className="text-sm text-muted-foreground mb-4">
-                              {stage.description}
+                              {step.description ||
+                                `${step.name} ${step.status.toLowerCase()}`}
                             </p>
-
-                            {/* Progress Bar for In Progress Stages */}
-                            {isActive && stage.progress !== undefined && (
-                              <div className="mb-4">
-                                <div className="flex justify-between text-xs mb-1">
-                                  <span>Progress</span>
-                                  <span>{stage.progress}%</span>
-                                </div>
-                                <Progress
-                                  value={stage.progress}
-                                  className="h-2"
-                                />
-                              </div>
-                            )}
 
                             {/* Stage Details */}
                             <div className="grid gap-4 md:grid-cols-2">
@@ -1242,7 +1518,23 @@ export default function FinancingRequestDetailPage({
                                   ASSIGNED TO
                                 </Label>
                                 <p className="text-sm font-medium">
-                                  {stage.actor}
+                                  {step.name === "Invoice Submitted"
+                                    ? "Seller"
+                                    : step.name === "Document Review"
+                                    ? "Document Review Team"
+                                    : step.name === "Credit Check"
+                                    ? "Credit Assessment Team"
+                                    : step.name === "Approved for Factoring"
+                                    ? "Senior Credit Officer"
+                                    : step.name === "Advance Payment Sent"
+                                    ? "Finance Operations"
+                                    : step.name === "Collection Period"
+                                    ? "Collections Team"
+                                    : step.name === "Payment Collected"
+                                    ? "Collections Team"
+                                    : step.name === "Transaction Completed"
+                                    ? "Finance Operations"
+                                    : "System"}
                                 </p>
                               </div>
                               <div>
@@ -1250,7 +1542,23 @@ export default function FinancingRequestDetailPage({
                                   ESTIMATED DURATION
                                 </Label>
                                 <p className="text-sm">
-                                  {stage.estimatedDuration}
+                                  {step.name === "Invoice Submitted"
+                                    ? "Immediate"
+                                    : step.name === "Document Review"
+                                    ? "2-4 hours"
+                                    : step.name === "Credit Check"
+                                    ? "1-2 business days"
+                                    : step.name === "Approved for Factoring"
+                                    ? "2-4 hours"
+                                    : step.name === "Advance Payment Sent"
+                                    ? "1-2 business days"
+                                    : step.name === "Collection Period"
+                                    ? "30-90 days"
+                                    : step.name === "Payment Collected"
+                                    ? "Immediate upon receipt"
+                                    : step.name === "Transaction Completed"
+                                    ? "1-2 hours"
+                                    : "Varies"}
                                 </p>
                               </div>
                             </div>
@@ -1261,7 +1569,63 @@ export default function FinancingRequestDetailPage({
                                 REQUIREMENTS
                               </Label>
                               <div className="grid gap-1 mt-1">
-                                {stage.requirements.map((req, reqIndex) => (
+                                {(step.name === "Invoice Submitted"
+                                  ? [
+                                      "Invoice document",
+                                      "Purchase order",
+                                      "Basic company information",
+                                    ]
+                                  : step.name === "Document Review"
+                                  ? [
+                                      "Invoice verification",
+                                      "Purchase order validation",
+                                      "Delivery receipt confirmation",
+                                      "Trade document authenticity check",
+                                    ]
+                                  : step.name === "Credit Check"
+                                  ? [
+                                      "Buyer credit history analysis",
+                                      "Financial statement review",
+                                      "Payment behavior assessment",
+                                      "Industry risk evaluation",
+                                    ]
+                                  : step.name === "Approved for Factoring"
+                                  ? [
+                                      "Final approval decision",
+                                      "Factoring terms confirmation",
+                                      "Advance rate finalization",
+                                      "Legal documentation preparation",
+                                    ]
+                                  : step.name === "Advance Payment Sent"
+                                  ? [
+                                      "Payment processing setup",
+                                      "Banking details verification",
+                                      "Compliance checks",
+                                      "Fund disbursement",
+                                    ]
+                                  : step.name === "Collection Period"
+                                  ? [
+                                      "Payment monitoring",
+                                      "Buyer communication",
+                                      "Collection activities",
+                                      "Payment tracking",
+                                    ]
+                                  : step.name === "Payment Collected"
+                                  ? [
+                                      "Payment receipt confirmation",
+                                      "Amount verification",
+                                      "Reserve release calculation",
+                                      "Final settlement preparation",
+                                    ]
+                                  : step.name === "Transaction Completed"
+                                  ? [
+                                      "Reserve amount release",
+                                      "Final settlement processing",
+                                      "Transaction documentation",
+                                      "Case closure",
+                                    ]
+                                  : ["System verification"]
+                                ).map((req, reqIndex) => (
                                   <div
                                     key={reqIndex}
                                     className="flex items-center gap-2 text-sm"
@@ -1281,49 +1645,73 @@ export default function FinancingRequestDetailPage({
                               </div>
                             </div>
 
-                            {/* Notes */}
-                            {stage.notes && (
-                              <div className="mt-4 p-3 bg-background rounded border">
-                                <Label className="text-xs font-medium text-muted-foreground">
-                                  NOTES
-                                </Label>
-                                <p className="text-sm mt-1">{stage.notes}</p>
-                              </div>
-                            )}
-
                             {/* Completion Details */}
-                            {isCompleted && stage.completedAt && (
+                            {isCompleted && step.date && (
                               <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded">
                                 <div className="flex items-center gap-2 text-green-800">
                                   <CheckCircle className="h-4 w-4" />
                                   <span className="text-sm font-medium">
                                     Completed on{" "}
-                                    {formatDetailedDateTime(stage.completedAt)}
+                                    {formatDetailedDateTime(step.date)}
                                   </span>
                                 </div>
                               </div>
                             )}
 
-                            {/* Action Buttons for Active Stages */}
-                            {isActive && (
-                              <div className="mt-4 flex gap-2">
+                            {/* Action Buttons */}
+                            <div className="mt-4 space-y-4">
+                              <div className="flex gap-2">
+                                {!isCompleted && canCompleteStep(index) && (
+                                  <Button
+                                    size="sm"
+                                    className="bg-blue-600 hover:bg-blue-700"
+                                    onClick={() => handleCompleteStep(step._id)}
+                                    disabled={isUpdatingStep === step._id}
+                                  >
+                                    {isUpdatingStep === step._id ? (
+                                      <>
+                                        <span className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                                        Completing...
+                                      </>
+                                    ) : (
+                                      <>
+                                        <CheckCircle className="h-4 w-4 mr-2" />
+                                        Complete Stage
+                                      </>
+                                    )}
+                                  </Button>
+                                )}
                                 <Button
+                                  variant="outline"
                                   size="sm"
-                                  className="bg-blue-600 hover:bg-blue-700"
+                                  className={`text-yellow-600 border-yellow-200 hover:bg-yellow-50 ${
+                                    flagIssueStepId === step._id
+                                      ? "bg-yellow-50"
+                                      : ""
+                                  }`}
+                                  onClick={() => handleFlagIssue(step._id)}
                                 >
-                                  <CheckCircle className="h-4 w-4 mr-2" />
-                                  Complete Stage
-                                </Button>
-                                <Button variant="outline" size="sm">
-                                  <MessageSquare className="h-4 w-4 mr-2" />
-                                  Add Note
-                                </Button>
-                                <Button variant="outline" size="sm">
                                   <AlertTriangle className="h-4 w-4 mr-2" />
-                                  Flag Issue
+                                  {flagIssueStepId === step._id
+                                    ? "Submit Issue"
+                                    : "Flag Issue"}
                                 </Button>
                               </div>
-                            )}
+
+                              {/* Flag Issue Input */}
+                              {flagIssueStepId === step._id && (
+                                <div className="space-y-2">
+                                  <Textarea
+                                    placeholder="Describe the issue..."
+                                    value={issueDescription}
+                                    onChange={(e) =>
+                                      setIssueDescription(e.target.value)
+                                    }
+                                    className="min-h-[80px] text-sm"
+                                  />
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -1717,42 +2105,70 @@ export default function FinancingRequestDetailPage({
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {mockRequest.documents.invoiceDocuments.map((doc, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between p-3 border rounded-lg"
-                    >
-                      <div className="flex items-center gap-3">
-                        <FileText className="h-4 w-4 text-muted-foreground" />
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">{doc.name}</span>
-                            {doc.required && (
-                              <Badge variant="outline" className="text-xs">
-                                Required
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            {doc.uploadDate
-                              ? `Uploaded ${formatDate(doc.uploadDate)} • ${
-                                  doc.fileSize
-                                }`
-                              : "Not uploaded"}
+                  {requestData &&
+                    [
+                      {
+                        name: "FCR - Forwarder's Cargo Receipt",
+                        path: requestData.invoice_documents.fcr,
+                        required: true,
+                      },
+                      {
+                        name: "GD - Goods Declaration",
+                        path: requestData.invoice_documents.gd,
+                        required: true,
+                      },
+                      {
+                        name: "Bill of Lading",
+                        path: requestData.invoice_documents.bill_of_lading,
+                        required: true,
+                      },
+                      {
+                        name: "Packing List",
+                        path: requestData.invoice_documents.packing_list,
+                        required: true,
+                      },
+                    ].map((doc, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-3 border rounded-lg"
+                      >
+                        <div className="flex items-center gap-3">
+                          <FileText className="h-4 w-4 text-muted-foreground" />
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{doc.name}</span>
+                              {doc.required && (
+                                <Badge variant="outline" className="text-xs">
+                                  Required
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {doc.path
+                                ? `Uploaded • ${doc.path.split("/").pop()}`
+                                : "Not uploaded"}
+                            </div>
                           </div>
                         </div>
+                        <div className="flex items-center gap-2">
+                          {getDocumentStatusBadge(
+                            doc.path ? "completed" : "pending"
+                          )}
+                          {doc.path && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() =>
+                                window.open(getDocumentUrl(doc.path), "_blank")
+                              }
+                            >
+                              <Eye className="h-4 w-4 mr-2" />
+                              View
+                            </Button>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        {getDocumentStatusBadge(doc.status)}
-                        {doc.status === "completed" && (
-                          <Button variant="outline" size="sm">
-                            <Eye className="h-4 w-4 mr-2" />
-                            View
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                    ))}
                 </div>
               </CardContent>
             </Card>
@@ -2120,39 +2536,38 @@ export default function FinancingRequestDetailPage({
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
-                {mockRequest.timeline.map((event, index) => (
-                  <div key={event.id} className="flex gap-4">
+                {requestData?.timeline.steps.map((step, index) => (
+                  <div key={step._id || index} className="flex gap-4">
                     <div className="flex flex-col items-center">
                       <div
                         className={`w-3 h-3 rounded-full ${
-                          event.status === "completed"
+                          step.status === "Completed"
                             ? "bg-green-600"
-                            : event.status === "pending"
+                            : step.status === "Pending"
                             ? "bg-yellow-600"
                             : "bg-gray-300"
                         }`}
                       />
-                      {index < mockRequest.timeline.length - 1 && (
+                      {index <
+                        (requestData?.timeline.steps.length || 0) - 1 && (
                         <div className="w-px h-12 bg-gray-200 mt-2" />
                       )}
                     </div>
                     <div className="flex-1 pb-8">
                       <div className="flex items-center justify-between mb-1">
-                        <h4 className="font-medium">{event.title}</h4>
+                        <h4 className="font-medium">{step.name}</h4>
                         <span className="text-sm text-muted-foreground">
-                          {formatDateTime(event.timestamp)}
+                          {step.date ? formatDateTime(step.date) : "Pending"}
                         </span>
                       </div>
                       <p className="text-sm text-muted-foreground mb-2">
-                        {event.description}
+                        {step.description ||
+                          `${step.name} ${step.status.toLowerCase()}`}
                       </p>
                       <div className="flex items-center gap-2">
                         <Badge variant="outline" className="text-xs">
-                          {event.type.replace("_", " ").toUpperCase()}
+                          {step.status.toUpperCase()}
                         </Badge>
-                        <span className="text-xs text-muted-foreground">
-                          by {event.actor}
-                        </span>
                       </div>
                     </div>
                   </div>

@@ -155,6 +155,8 @@ interface Company {
   financial_statements?: string;
   tax_registration_documents?: string;
   verification_image?: string;
+  status: string;
+  documents_status: string;
 }
 
 interface ApplicationDocument {
@@ -658,7 +660,7 @@ export default function UnifiedSellerManagementPage() {
     switch (status.toLowerCase()) {
       case "pending":
         return "bg-orange-100 text-orange-800 border-orange-200";
-      case "under_review":
+      case "hold":
         return "bg-blue-100 text-blue-800 border-blue-200";
       case "approved":
         return "bg-green-100 text-green-800 border-green-200";
@@ -1212,11 +1214,9 @@ export default function UnifiedSellerManagementPage() {
                       </div>
                       <Badge
                         variant="outline"
-                        className={getStatusColor(
-                          company.action_type === 1 ? "approved" : "pending"
-                        )}
+                        className={getStatusColor(company.status)}
                       >
-                        {company.action_type === 1 ? "Approved" : "Pending"}
+                        {company.status}
                       </Badge>
                     </div>
                   ))}

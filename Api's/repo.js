@@ -10,3 +10,14 @@ export const updateCompanyStatusApiCall =
   "safar-capital/api/company/update-status";
 export const getCompanyDetailById =
   process.env.NEXT_PUBLIC_API_BASE_URL + "safar-capital/api/company/get";
+export const getAllFinancingRequestsApiCall =
+  process.env.NEXT_PUBLIC_API_BASE_URL +
+  "safar-capital/api/invoice/get-financing-req";
+export const UpdateFinancingRequestStatusApiCall =
+  process.env.NEXT_PUBLIC_API_BASE_URL +
+  "safar-capital/api/invoice/update-inv-status";
+export const timeLineUpdateStepApiCall =
+  process.env.NEXT_PUBLIC_API_BASE_URL +
+  "safar-capital/api/invoice-timeline/update-step";
+export const getInvoiceDetailByIdApiCall =
+  process.env.NEXT_PUBLIC_API_BASE_URL + "safar-capital/api/invoice/get";
