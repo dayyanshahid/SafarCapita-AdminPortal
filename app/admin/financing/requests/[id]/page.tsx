@@ -607,6 +607,11 @@ const getStatusBadge = (status: string) => {
       color: "bg-yellow-100 text-yellow-800 border-yellow-200",
       icon: AlertTriangle,
     },
+    Flag: {
+      label: "Flagged",
+      color: "bg-orange-100 text-orange-800 border-orange-200",
+      icon: AlertTriangle,
+    },
   };
 
   const config =
@@ -729,7 +734,18 @@ const formatDetailedDateTime = (dateString: string) => {
   });
 };
 
+const getDocumentName = (key: string) => {
+  const documentNames: { [key: string]: string } = {
+    fcr: "FCR - Forwarder's Cargo Receipt",
+    gd: "GD - Goods Declaration",
+    bill_of_lading: "Bill of Lading",
+    packing_list: "Packing List",
+  };
+  return documentNames[key] || key;
+};
+
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+const IMAGE_URL = process.env.NEXT_PUBLIC_IMAGE_URL || "http://localhost:5000";
 
 interface RequestData {
   _id: string;
@@ -885,22 +901,83 @@ export default function FinancingRequestDetailPage({
     // First step can always be completed
     if (currentIndex === 0) return true;
 
-    // For other steps, check if previous step is completed
+    // For other steps, check if previous step is completed or flagged
     const previousStep = requestData.timeline.steps[currentIndex - 1];
-    return previousStep?.status === "Completed";
+    return previousStep?.status === "Completed" || previousStep?.status === "Flag";
   };
 
-  const handleFlagIssue = (stepId: string) => {
+  const handleFlagIssue = async (stepId: string) => {
     if (flagIssueStepId === stepId) {
       // Submit the issue
-      console.log(
-        "Submitting issue for step:",
-        stepId,
-        "Description:",
-        issueDescription
-      );
-      setFlagIssueStepId(null);
-      setIssueDescription("");
+      try {
+        if (!issueDescription.trim()) {
+          toast({
+            title: "Error",
+            description: "Please enter a description for the issue.",
+            variant: "error",
+          });
+          return;
+        }
+
+        const response = await makeRequest({
+          url: timeLineUpdateStepApiCall,
+          method: "POST",
+          data: {
+            invoice_id: requestData?._id,
+            step_id: stepId,
+            status: "Flag",
+            description: issueDescription.trim(),
+          },
+        });
+
+        if (response.status === 200) {
+          toast({
+            title: "Success",
+            description: "Issue has been flagged successfully.",
+            variant: "success",
+          });
+          
+          // Update local state to reflect the change
+          setRequestData((prev) => {
+            if (!prev) return null;
+            
+            const updatedSteps = prev.timeline.steps.map((step, index) => {
+              // Mark the flagged step
+              if (step._id === stepId) {
+                return { ...step, status: "Flag" };
+              }
+              
+              // Find the flagged step index
+              const flaggedStepIndex = prev.timeline.steps.findIndex(s => s._id === stepId);
+              
+              // If this is the next step after the flagged step, set it to "In Progress"
+              if (index === flaggedStepIndex + 1 && step.status === "Pending") {
+                return { ...step, status: "In Progress" };
+              }
+              
+              return step;
+            });
+            
+            return {
+              ...prev,
+              timeline: {
+                ...prev.timeline,
+                steps: updatedSteps,
+              },
+            };
+          });
+          
+          setFlagIssueStepId(null);
+          setIssueDescription("");
+        }
+      } catch (error) {
+        console.error("Error flagging issue:", error);
+        toast({
+          title: "Error",
+          description: "Failed to flag the issue. Please try again.",
+          variant: "error",
+        });
+      }
     } else {
       setFlagIssueStepId(stepId);
     }
@@ -946,7 +1023,7 @@ export default function FinancingRequestDetailPage({
 
   const getDocumentUrl = (path: string) => {
     if (!path) return "";
-    return `${BASE_URL}/${path}`;
+    return `${IMAGE_URL}${path}`;
   };
 
   const calculateOverallProgress = () => {
@@ -1056,9 +1133,28 @@ export default function FinancingRequestDetailPage({
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {mockRequest.documentsComplete}%
+              {requestData?.timeline?.steps
+                ? Math.round(
+                    (requestData.timeline.steps.filter(
+                      (step) => step.status === "Completed"
+                    ).length /
+                      requestData.timeline.steps.length) *
+                      100
+                  )
+                : 0}%
             </div>
-            <Progress value={mockRequest.documentsComplete} className="mt-2" />
+            <Progress 
+              value={
+                requestData?.timeline?.steps
+                  ? (requestData.timeline.steps.filter(
+                      (step) => step.status === "Completed"
+                    ).length /
+                      requestData.timeline.steps.length) *
+                    100
+                  : 0
+              } 
+              className="mt-2" 
+            />
           </CardContent>
         </Card>
         <Card>
@@ -1097,7 +1193,7 @@ export default function FinancingRequestDetailPage({
         onValueChange={setActiveTab}
         className="space-y-6"
       >
-        <TabsList className="grid w-full grid-cols-8">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="approval-stages">Approval Stages</TabsTrigger>
           <TabsTrigger value="invoice-order">Invoice & Order</TabsTrigger>
@@ -1105,7 +1201,7 @@ export default function FinancingRequestDetailPage({
           <TabsTrigger value="ai-validation">AI Validation</TabsTrigger>
           {/* <TabsTrigger value="risk-assessment">Risk Assessment</TabsTrigger> */}
           <TabsTrigger value="timeline">Timeline</TabsTrigger>
-          <TabsTrigger value="actions">Actions</TabsTrigger>
+          {/* <TabsTrigger value="actions">Actions</TabsTrigger> */}
         </TabsList>
 
         {/* Overview Tab */}
@@ -1457,6 +1553,7 @@ export default function FinancingRequestDetailPage({
                     const isActive = step.status === "In Progress";
                     const isCompleted = step.status === "Completed";
                     const isPending = step.status === "Pending";
+                    const isFlagged = step.status === "Flag";
 
                     return (
                       <div key={step._id} className="relative">
@@ -1472,6 +1569,8 @@ export default function FinancingRequestDetailPage({
                               ? "border-blue-200 bg-blue-50 shadow-md"
                               : isCompleted
                               ? "border-green-200 bg-green-50"
+                              : isFlagged
+                              ? "border-orange-200 bg-orange-50"
                               : "border-gray-200 bg-gray-50"
                           }`}
                         >
@@ -1483,6 +1582,8 @@ export default function FinancingRequestDetailPage({
                                   ? "bg-blue-600 text-white"
                                   : isCompleted
                                   ? "bg-green-600 text-white"
+                                  : isFlagged
+                                  ? "bg-orange-600 text-white"
                                   : "bg-gray-300 text-gray-600"
                               }`}
                             >
@@ -1630,15 +1731,17 @@ export default function FinancingRequestDetailPage({
                                     key={reqIndex}
                                     className="flex items-center gap-2 text-sm"
                                   >
-                                    <div
-                                      className={`w-2 h-2 rounded-full ${
-                                        isCompleted
-                                          ? "bg-green-500"
-                                          : isActive
-                                          ? "bg-blue-500"
-                                          : "bg-gray-300"
-                                      }`}
-                                    />
+                                                                      <div
+                                    className={`w-2 h-2 rounded-full ${
+                                      isCompleted
+                                        ? "bg-green-500"
+                                        : isActive
+                                        ? "bg-blue-500"
+                                        : isFlagged
+                                        ? "bg-orange-500"
+                                        : "bg-gray-300"
+                                    }`}
+                                  />
                                     {req}
                                   </div>
                                 ))}
@@ -1658,10 +1761,27 @@ export default function FinancingRequestDetailPage({
                               </div>
                             )}
 
+                            {/* Flagged Issue Details */}
+                            {isFlagged && step.description && (
+                              <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded">
+                                <div className="flex items-start gap-2">
+                                  <AlertTriangle className="h-4 w-4 text-orange-600 mt-0.5 flex-shrink-0" />
+                                  <div>
+                                    <div className="text-sm font-semibold text-orange-800 mb-1">
+                                      Issue Flagged
+                                    </div>
+                                    <p className="text-sm text-orange-700 font-medium">
+                                      {step.description}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
                             {/* Action Buttons */}
                             <div className="mt-4 space-y-4">
                               <div className="flex gap-2">
-                                {!isCompleted && canCompleteStep(index) && (
+                                {!isCompleted && !isFlagged && canCompleteStep(index) && (
                                   <Button
                                     size="sm"
                                     className="bg-blue-600 hover:bg-blue-700"
@@ -1681,21 +1801,31 @@ export default function FinancingRequestDetailPage({
                                     )}
                                   </Button>
                                 )}
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className={`text-yellow-600 border-yellow-200 hover:bg-yellow-50 ${
-                                    flagIssueStepId === step._id
-                                      ? "bg-yellow-50"
-                                      : ""
-                                  }`}
-                                  onClick={() => handleFlagIssue(step._id)}
-                                >
-                                  <AlertTriangle className="h-4 w-4 mr-2" />
-                                  {flagIssueStepId === step._id
-                                    ? "Submit Issue"
-                                    : "Flag Issue"}
-                                </Button>
+                                {!isFlagged && !isCompleted && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className={`text-yellow-600 border-yellow-200 hover:bg-yellow-50 ${
+                                      flagIssueStepId === step._id
+                                        ? "bg-yellow-50"
+                                        : ""
+                                    }`}
+                                    onClick={() => handleFlagIssue(step._id)}
+                                  >
+                                    <AlertTriangle className="h-4 w-4 mr-2" />
+                                    {flagIssueStepId === step._id
+                                      ? "Submit Issue"
+                                      : "Flag Issue"}
+                                  </Button>
+                                )}
+                                {/* {isFlagged && (
+                                  <div className="flex items-center gap-2 text-orange-700">
+                                    <AlertTriangle className="h-4 w-4" />
+                                    <span className="text-sm font-medium">
+                                      Issue Flagged
+                                    </span>
+                                  </div>
+                                )} */}
                               </div>
 
                               {/* Flag Issue Input */}
@@ -1720,7 +1850,7 @@ export default function FinancingRequestDetailPage({
                 </div>
 
                 {/* Next Steps */}
-                <Card className="bg-blue-50 border-blue-200">
+                {/* <Card className="bg-blue-50 border-blue-200">
                   <CardHeader>
                     <CardTitle className="text-blue-900 flex items-center gap-2">
                       <TrendingUp className="h-5 w-5" />
@@ -1746,7 +1876,7 @@ export default function FinancingRequestDetailPage({
                       </p>
                     </div>
                   </CardContent>
-                </Card>
+                </Card> */}
               </div>
             </CardContent>
           </Card>
@@ -1770,13 +1900,13 @@ export default function FinancingRequestDetailPage({
                       Invoice Number
                     </Label>
                     <p className="text-sm text-muted-foreground">
-                      {mockRequest.invoiceNumber}
+                      {requestData?.invoice_number || "Not found"}
                     </p>
                   </div>
                   <div>
                     <Label className="text-sm font-medium">PO Number</Label>
                     <p className="text-sm text-muted-foreground">
-                      {mockRequest.poNumber}
+                      {requestData?.purchase_order_number || "Not found"}
                     </p>
                   </div>
                 </div>
@@ -1784,19 +1914,19 @@ export default function FinancingRequestDetailPage({
                   <div>
                     <Label className="text-sm font-medium">Invoice Date</Label>
                     <p className="text-sm text-muted-foreground">
-                      {formatDate(mockRequest.invoiceDate)}
+                      {requestData?.invoice_date ? formatDate(requestData.invoice_date) : "Not found"}
                     </p>
                   </div>
                   <div>
                     <Label className="text-sm font-medium">Due Date</Label>
                     <p className="text-sm text-muted-foreground">
-                      {formatDate(mockRequest.dueDate)}
+                      {requestData?.due_date ? formatDate(requestData.due_date) : "Not found"}
                     </p>
                   </div>
                   <div>
                     <Label className="text-sm font-medium">Delivery Date</Label>
                     <p className="text-sm text-muted-foreground">
-                      {formatDate(mockRequest.deliveryDate)}
+                      {requestData?.delivery_date ? formatDate(requestData.delivery_date) : "Not found"}
                     </p>
                   </div>
                 </div>
@@ -1806,23 +1936,22 @@ export default function FinancingRequestDetailPage({
                       Invoice Amount
                     </Label>
                     <p className="text-lg font-semibold">
-                      {formatCurrency(
-                        mockRequest.invoiceAmount,
-                        mockRequest.currency
-                      )}
+                      {requestData?.invoice_amount && requestData?.currency
+                        ? formatCurrency(requestData.invoice_amount, requestData.currency)
+                        : "Not found"}
                     </p>
                   </div>
                   <div>
                     <Label className="text-sm font-medium">Currency</Label>
                     <p className="text-sm text-muted-foreground">
-                      {mockRequest.currency}
+                      {requestData?.currency || "Not found"}
                     </p>
                   </div>
                 </div>
                 <div>
                   <Label className="text-sm font-medium">Payment Terms</Label>
                   <p className="text-sm text-muted-foreground">
-                    {mockRequest.paymentTerms}
+                    {requestData?.payment_terms || "Not found"}
                   </p>
                 </div>
                 <div>
@@ -1830,7 +1959,7 @@ export default function FinancingRequestDetailPage({
                     Invoice Description
                   </Label>
                   <p className="text-sm text-muted-foreground">
-                    {mockRequest.invoiceDescription}
+                    {requestData?.invoice_description || "Not found"}
                   </p>
                 </div>
               </CardContent>
@@ -1848,13 +1977,13 @@ export default function FinancingRequestDetailPage({
                 <div>
                   <Label className="text-sm font-medium">Order Number</Label>
                   <p className="text-sm text-muted-foreground">
-                    {mockRequest.orderNumber}
+                    {requestData?.order_number || "Not found"}
                   </p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium">Incoterms</Label>
                   <p className="text-sm text-muted-foreground">
-                    {mockRequest.incoterms}
+                    {requestData?.incoterms || "Not found"}
                   </p>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -1863,7 +1992,7 @@ export default function FinancingRequestDetailPage({
                       Port of Loading
                     </Label>
                     <p className="text-sm text-muted-foreground">
-                      {mockRequest.portOfLoading}
+                      {requestData?.port_of_loading || "Not found"}
                     </p>
                   </div>
                   <div>
@@ -1871,7 +2000,7 @@ export default function FinancingRequestDetailPage({
                       Port of Discharge
                     </Label>
                     <p className="text-sm text-muted-foreground">
-                      {mockRequest.portOfDischarge}
+                      {requestData?.port_of_discharge || "Not found"}
                     </p>
                   </div>
                 </div>
@@ -1880,7 +2009,9 @@ export default function FinancingRequestDetailPage({
                     Shipment Information
                   </Label>
                   <p className="text-sm text-muted-foreground">
-                    {mockRequest.shipmentInfo}
+                    {requestData?.shipment_information && requestData.shipment_information !== "null" 
+                      ? requestData.shipment_information 
+                      : "Not found"}
                   </p>
                 </div>
               </CardContent>
@@ -1902,7 +2033,7 @@ export default function FinancingRequestDetailPage({
                     Product Description
                   </Label>
                   <p className="text-sm text-muted-foreground">
-                    {mockRequest.productDescription}
+                    {requestData?.product_description || "Not found"}
                   </p>
                 </div>
                 <div>
@@ -1910,7 +2041,11 @@ export default function FinancingRequestDetailPage({
                     Product Category
                   </Label>
                   <p className="text-sm text-muted-foreground">
-                    {mockRequest.productCategory}
+                    {requestData?.product_category 
+                      ? requestData.product_category.split("-").map(
+                          (word) => word.charAt(0).toUpperCase() + word.slice(1)
+                        ).join(" ")
+                      : "Not found"}
                   </p>
                 </div>
                 <div className="grid grid-cols-3 gap-4">
@@ -1919,29 +2054,28 @@ export default function FinancingRequestDetailPage({
                       Unit of Measure
                     </Label>
                     <p className="text-sm text-muted-foreground">
-                      {mockRequest.unitOfMeasure}
+                      {requestData?.unit_of_measure || "Not found"}
                     </p>
                   </div>
                   <div>
                     <Label className="text-sm font-medium">Quantity</Label>
                     <p className="text-sm text-muted-foreground">
-                      {mockRequest.quantity.toLocaleString()}
+                      {requestData?.quantity ? requestData.quantity.toLocaleString() : "Not found"}
                     </p>
                   </div>
                   <div>
                     <Label className="text-sm font-medium">Unit Price</Label>
                     <p className="text-sm text-muted-foreground">
-                      {formatCurrency(
-                        mockRequest.unitPrice,
-                        mockRequest.currency
-                      )}
+                      {requestData?.unit_price && requestData?.currency
+                        ? formatCurrency(requestData.unit_price, requestData.currency)
+                        : "Not found"}
                     </p>
                   </div>
                 </div>
                 <div>
                   <Label className="text-sm font-medium">Total Weight</Label>
                   <p className="text-sm text-muted-foreground">
-                    {mockRequest.totalWeight.toLocaleString()} kg
+                    {requestData?.total_weight_kg ? `${requestData.total_weight_kg.toLocaleString()} kg` : "Not found"}
                   </p>
                 </div>
               </CardContent>
@@ -1961,10 +2095,9 @@ export default function FinancingRequestDetailPage({
                     Requested Financing Amount
                   </Label>
                   <p className="text-lg font-semibold text-blue-600">
-                    {formatCurrency(
-                      mockRequest.requestedAmount,
-                      mockRequest.currency
-                    )}
+                    {requestData?.requested_financing_amount && requestData?.currency
+                      ? formatCurrency(requestData.requested_financing_amount, requestData.currency)
+                      : "Not found"}
                   </p>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -1973,7 +2106,7 @@ export default function FinancingRequestDetailPage({
                       Requested Advance Rate
                     </Label>
                     <p className="text-sm text-muted-foreground">
-                      {mockRequest.advanceRate}%
+                      {requestData?.requested_advance_rate ? `${requestData.requested_advance_rate}%` : "Not found"}
                     </p>
                   </div>
                   <div>
@@ -1981,7 +2114,7 @@ export default function FinancingRequestDetailPage({
                       Repayment Period
                     </Label>
                     <p className="text-sm text-muted-foreground">
-                      {mockRequest.repaymentPeriod} days
+                      {requestData?.repayment_period || "Not found"}
                     </p>
                   </div>
                 </div>
@@ -1994,29 +2127,25 @@ export default function FinancingRequestDetailPage({
                     <div className="flex justify-between">
                       <span>Invoice Amount:</span>
                       <span>
-                        {formatCurrency(
-                          mockRequest.invoiceAmount,
-                          mockRequest.currency
-                        )}
+                        {requestData?.invoice_amount && requestData?.currency
+                          ? formatCurrency(requestData.invoice_amount, requestData.currency)
+                          : "Not found"}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span>Advance Rate ({mockRequest.advanceRate}%):</span>
+                      <span>Advance Rate ({requestData?.requested_advance_rate || 0}%):</span>
                       <span className="font-semibold">
-                        {formatCurrency(
-                          mockRequest.requestedAmount,
-                          mockRequest.currency
-                        )}
+                        {requestData?.requested_financing_amount && requestData?.currency
+                          ? formatCurrency(requestData.requested_financing_amount, requestData.currency)
+                          : "Not found"}
                       </span>
                     </div>
                     <div className="flex justify-between text-muted-foreground">
-                      <span>Reserve ({100 - mockRequest.advanceRate}%):</span>
+                      <span>Reserve ({requestData?.requested_advance_rate ? 100 - requestData.requested_advance_rate : 0}%):</span>
                       <span>
-                        {formatCurrency(
-                          mockRequest.invoiceAmount -
-                            mockRequest.requestedAmount,
-                          mockRequest.currency
-                        )}
+                        {requestData?.invoice_amount && requestData?.requested_financing_amount && requestData?.currency
+                          ? formatCurrency(requestData.invoice_amount - requestData.requested_financing_amount, requestData.currency)
+                          : "Not found"}
                       </span>
                     </div>
                   </div>
@@ -2038,7 +2167,7 @@ export default function FinancingRequestDetailPage({
                 <div>
                   <Label className="text-sm font-medium">Company Name</Label>
                   <p className="text-sm text-muted-foreground">
-                    {mockRequest.buyer}
+                    {requestData?.buyers_id?.buyer_company_name || "Not found"}
                   </p>
                 </div>
                 <div>
@@ -2046,7 +2175,7 @@ export default function FinancingRequestDetailPage({
                     Registration Number
                   </Label>
                   <p className="text-sm text-muted-foreground">
-                    {mockRequest.buyerRegistration}
+                    {requestData?.buyers_id?.registration_number || "Not found"}
                   </p>
                 </div>
               </div>
@@ -2054,13 +2183,13 @@ export default function FinancingRequestDetailPage({
                 <div>
                   <Label className="text-sm font-medium">Email Address</Label>
                   <p className="text-sm text-muted-foreground">
-                    {mockRequest.buyerEmail}
+                    {requestData?.buyers_id?.contact_email || "Not found"}
                   </p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium">Phone Number</Label>
                   <p className="text-sm text-muted-foreground">
-                    {mockRequest.buyerPhone}
+                    {requestData?.buyers_id?.contact_phone || "Not found"}
                   </p>
                 </div>
               </div>
@@ -2068,23 +2197,22 @@ export default function FinancingRequestDetailPage({
                 <div>
                   <Label className="text-sm font-medium">Credit Limit</Label>
                   <p className="text-sm text-muted-foreground">
-                    {formatCurrency(
-                      mockRequest.creditLimit,
-                      mockRequest.currency
-                    )}
+                    {requestData?.buyers_id?.credit_limit && requestData?.currency
+                      ? formatCurrency(requestData.buyers_id.credit_limit, requestData.currency)
+                      : "Not found"}
                   </p>
                 </div>
                 <div>
-                  <Label className="text-sm font-medium">Payment Terms</Label>
+                  <Label className="text-sm font-medium">Country</Label>
                   <p className="text-sm text-muted-foreground">
-                    {mockRequest.buyerPaymentTerms}
+                    {requestData?.buyers_id?.country || "Not found"}
                   </p>
                 </div>
               </div>
               <div>
-                <Label className="text-sm font-medium">Billing Address</Label>
+                <Label className="text-sm font-medium">Buyer Address</Label>
                 <p className="text-sm text-muted-foreground">
-                  {mockRequest.billingAddress}
+                  {requestData?.buyers_id?.buyer_address || "Not found"}
                 </p>
               </div>
             </CardContent>
@@ -2106,28 +2234,15 @@ export default function FinancingRequestDetailPage({
               <CardContent>
                 <div className="space-y-3">
                   {requestData &&
-                    [
-                      {
-                        name: "FCR - Forwarder's Cargo Receipt",
-                        path: requestData.invoice_documents.fcr,
+                    Object.entries(requestData.invoice_documents)
+                      .filter(([key]) => key !== "_id")
+                      .map(([key, path]) => ({
+                        key,
+                        name: getDocumentName(key),
+                        path,
                         required: true,
-                      },
-                      {
-                        name: "GD - Goods Declaration",
-                        path: requestData.invoice_documents.gd,
-                        required: true,
-                      },
-                      {
-                        name: "Bill of Lading",
-                        path: requestData.invoice_documents.bill_of_lading,
-                        required: true,
-                      },
-                      {
-                        name: "Packing List",
-                        path: requestData.invoice_documents.packing_list,
-                        required: true,
-                      },
-                    ].map((doc, index) => (
+                      }))
+                      .map((doc, index) => (
                       <div
                         key={index}
                         className="flex items-center justify-between p-3 border rounded-lg"
@@ -2151,9 +2266,6 @@ export default function FinancingRequestDetailPage({
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          {getDocumentStatusBadge(
-                            doc.path ? "completed" : "pending"
-                          )}
                           {doc.path && (
                             <Button
                               variant="outline"
@@ -2169,176 +2281,6 @@ export default function FinancingRequestDetailPage({
                         </div>
                       </div>
                     ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Supporting Documents */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  Supporting Documents
-                </CardTitle>
-                <CardDescription>
-                  Documents that support the invoice validity
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {mockRequest.documents.supportingDocuments.map(
-                    (doc, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between p-3 border rounded-lg"
-                      >
-                        <div className="flex items-center gap-3">
-                          <FileText className="h-4 w-4 text-muted-foreground" />
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium">{doc.name}</span>
-                              {doc.required && (
-                                <Badge variant="outline" className="text-xs">
-                                  Required
-                                </Badge>
-                              )}
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                              {doc.uploadDate
-                                ? `Uploaded ${formatDate(doc.uploadDate)} • ${
-                                    doc.fileSize
-                                  }`
-                                : "Not uploaded"}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {getDocumentStatusBadge(doc.status)}
-                          {doc.status === "completed" && (
-                            <Button variant="outline" size="sm">
-                              <Eye className="h-4 w-4 mr-2" />
-                              View
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    )
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Trade Finance Documents */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Ship className="h-5 w-5" />
-                  Trade Finance Documents
-                </CardTitle>
-                <CardDescription>
-                  International trade and shipping documentation
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {mockRequest.documents.tradeDocuments.map((doc, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between p-3 border rounded-lg"
-                    >
-                      <div className="flex items-center gap-3">
-                        <Ship className="h-4 w-4 text-muted-foreground" />
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">{doc.name}</span>
-                            {doc.required && (
-                              <Badge variant="outline" className="text-xs">
-                                Required
-                              </Badge>
-                            )}
-                            <Badge
-                              variant="outline"
-                              className="text-xs bg-blue-50 text-blue-700"
-                            >
-                              Trade Doc
-                            </Badge>
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            {doc.uploadDate
-                              ? `Uploaded ${formatDate(doc.uploadDate)} • ${
-                                  doc.fileSize
-                                }`
-                              : "Not uploaded"}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {getDocumentStatusBadge(doc.status)}
-                        {doc.status === "completed" && (
-                          <Button variant="outline" size="sm">
-                            <Eye className="h-4 w-4 mr-2" />
-                            View
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Additional Documents */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Plus className="h-5 w-5" />
-                  Additional Documents
-                </CardTitle>
-                <CardDescription>
-                  Optional documents that may strengthen the application
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {mockRequest.documents.additionalDocuments.map(
-                    (doc, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between p-3 border rounded-lg"
-                      >
-                        <div className="flex items-center gap-3">
-                          <FileText className="h-4 w-4 text-muted-foreground" />
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium">{doc.name}</span>
-                              <Badge
-                                variant="outline"
-                                className="text-xs bg-gray-50 text-gray-700"
-                              >
-                                Optional
-                              </Badge>
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                              {doc.uploadDate
-                                ? `Uploaded ${formatDate(doc.uploadDate)} • ${
-                                    doc.fileSize
-                                  }`
-                                : "Not uploaded"}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {getDocumentStatusBadge(doc.status)}
-                          {doc.status === "completed" && (
-                            <Button variant="outline" size="sm">
-                              <Eye className="h-4 w-4 mr-2" />
-                              View
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    )
-                  )}
                 </div>
               </CardContent>
             </Card>
@@ -2536,20 +2478,22 @@ export default function FinancingRequestDetailPage({
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
-                {requestData?.timeline.steps.map((step, index) => (
+                {requestData?.timeline?.steps?.map((step, index) => (
                   <div key={step._id || index} className="flex gap-4">
                     <div className="flex flex-col items-center">
                       <div
                         className={`w-3 h-3 rounded-full ${
                           step.status === "Completed"
                             ? "bg-green-600"
-                            : step.status === "Pending"
-                            ? "bg-yellow-600"
+                            : step.status === "In Progress"
+                            ? "bg-blue-600"
+                            : step.status === "Flag"
+                            ? "bg-orange-600"
                             : "bg-gray-300"
                         }`}
                       />
                       {index <
-                        (requestData?.timeline.steps.length || 0) - 1 && (
+                        (requestData?.timeline?.steps?.length || 0) - 1 && (
                         <div className="w-px h-12 bg-gray-200 mt-2" />
                       )}
                     </div>
@@ -2565,9 +2509,7 @@ export default function FinancingRequestDetailPage({
                           `${step.name} ${step.status.toLowerCase()}`}
                       </p>
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-xs">
-                          {step.status.toUpperCase()}
-                        </Badge>
+                        {getStatusBadge(step.status)}
                       </div>
                     </div>
                   </div>

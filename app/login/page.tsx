@@ -206,7 +206,7 @@ export default function LoginPage() {
         </Card>
 
         {/* Security Notice */}
-        <Card className="border-amber-200 bg-gradient-to-r from-amber-50 to-yellow-50">
+        {/* <Card className="border-amber-200 bg-gradient-to-r from-amber-50 to-yellow-50">
           <CardContent className="pt-6">
             <div className="flex items-start gap-3">
               <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -230,7 +230,7 @@ export default function LoginPage() {
               </div>
             </div>
           </CardContent>
-        </Card>
+        </Card> */}
 
         {/* Footer */}
         <div className="text-center text-xs text-muted-foreground">
