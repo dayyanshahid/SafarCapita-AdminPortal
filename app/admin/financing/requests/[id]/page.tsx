@@ -597,7 +597,12 @@ const getStatusBadge = (status: string) => {
       color: "bg-green-100 text-green-800 border-green-200",
       icon: CheckCircle,
     },
-    rejected: {
+    Approved: {
+      label: "Approved",
+      color: "bg-green-100 text-green-800 border-green-200",
+      icon: CheckCircle,
+    },
+    Rejected: {
       label: "Rejected",
       color: "bg-red-100 text-red-800 border-red-200",
       icon: XCircle,
@@ -1077,10 +1082,10 @@ export default function FinancingRequestDetailPage({
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button> */}
-          <Button variant="outline" size="sm">
-            <MessageSquare className="h-4 w-4 mr-2" />
-            Contact Seller
-          </Button>
+            {/* <Button variant="outline" size="sm">
+              <MessageSquare className="h-4 w-4 mr-2" />
+              Contact Seller
+            </Button> */}
         </div>
       </div>
 
@@ -1910,19 +1915,14 @@ export default function FinancingRequestDetailPage({
                     </p>
                   </div>
                 </div>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label className="text-sm font-medium">Invoice Date</Label>
                     <p className="text-sm text-muted-foreground">
                       {requestData?.invoice_date ? formatDate(requestData.invoice_date) : "Not found"}
                     </p>
                   </div>
-                  <div>
-                    <Label className="text-sm font-medium">Due Date</Label>
-                    <p className="text-sm text-muted-foreground">
-                      {requestData?.due_date ? formatDate(requestData.due_date) : "Not found"}
-                    </p>
-                  </div>
+                
                   <div>
                     <Label className="text-sm font-medium">Delivery Date</Label>
                     <p className="text-sm text-muted-foreground">
@@ -1942,18 +1942,27 @@ export default function FinancingRequestDetailPage({
                     </p>
                   </div>
                   <div>
-                    <Label className="text-sm font-medium">Currency</Label>
+                    <Label className="text-sm font-medium">Due Date</Label>
                     <p className="text-sm text-muted-foreground">
-                      {requestData?.currency || "Not found"}
+                      {requestData?.due_date ? formatDate(requestData.due_date) : "Not found"}
                     </p>
                   </div>
+                
                 </div>
+                <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label className="text-sm font-medium">Payment Terms</Label>
                   <p className="text-sm text-muted-foreground">
                     {requestData?.payment_terms || "Not found"}
                   </p>
                 </div>
+                <div>
+                    <Label className="text-sm font-medium">Currency</Label>
+                    <p className="text-sm text-muted-foreground">
+                      {requestData?.currency || "Not found"}
+                    </p>
+                  </div>
+</div>
                 <div>
                   <Label className="text-sm font-medium">
                     Invoice Description
