@@ -395,7 +395,7 @@ const mockApplication = {
 
 const getStatusBadge = (status: string) => {
   const statusConfig = {
-    pending: {
+    Pending: {
       label: "Pending",
       color: "bg-yellow-100 text-yellow-800 border-yellow-200",
       icon: Clock,
@@ -405,22 +405,22 @@ const getStatusBadge = (status: string) => {
       color: "bg-blue-100 text-blue-800 border-blue-200",
       icon: Eye,
     },
-    approved: {
+    Approved: {
       label: "Approved",
       color: "bg-green-100 text-green-800 border-green-200",
       icon: CheckCircle,
     },
-    rejected: {
+    Rejected: {
       label: "Rejected",
       color: "bg-red-100 text-red-800 border-red-200",
       icon: XCircle,
     },
-    completed: {
+    Completed: {
       label: "Completed",
       color: "bg-green-100 text-green-800 border-green-200",
       icon: CheckCircle,
     },
-    active: {
+    Active: {
       label: "Active",
       color: "bg-green-100 text-green-800 border-green-200",
       icon: CheckCircle,
@@ -433,7 +433,7 @@ const getStatusBadge = (status: string) => {
   };
 
   const config =
-    statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
+    statusConfig[status as keyof typeof statusConfig] || statusConfig.Pending;
   const Icon = config.icon;
 
   return (
@@ -491,27 +491,13 @@ interface ApiResponse {
   response_code: number;
   success: boolean;
   status_code: number;
+  total_records: null | number;
+  page_number: null | number;
+  total_pages: null | number;
   message: string;
   error_message: null | string;
+  token: null | string;
   result: {
-    bank_details: {
-      _id: string;
-      bank_name: string;
-      company_id: string;
-      account_holder_name: string;
-      account_number: string;
-      routing_number: string;
-      swift_bic_code: string;
-      account_type: string;
-      currency: string;
-      is_verified: number;
-      type: string;
-      bank_address: string;
-      iban: string;
-      action_type: number;
-      createdAt: string;
-      updatedAt: string;
-    };
     company: {
       _id: string;
       legal_company_name: string;
@@ -540,6 +526,7 @@ interface ApiResponse {
         department: string;
         bio: string;
         two_factor_authentication: string;
+        login_alerts: string;
         email_notifications: number;
         sms_notifications: number;
         push_notifications: number;
@@ -554,29 +541,25 @@ interface ApiResponse {
         action_type: number;
         createdAt: string;
         updatedAt: string;
+        __v: number;
       };
+      action_type: number;
+      status: string;
+      documents_status: string;
       createdAt: string;
       updatedAt: string;
-      bank_statements: string;
-      business_registration_certificate: string;
-      financial_statements: string;
-      tax_registration_documents: string;
-      verification_image: string;
-      document_status: string;
-      export_license?: string;
-      trade_license?: string;
+      __v: number;
     };
     invoices: {
       data: Array<{
         _id: string;
         invoice_number: string;
-        invoice_amount: number;
-        currency: string;
-        status: string;
-        requested_financing_amount: number;
+        purchase_order_number: string;
         invoice_date: string;
         due_date: string;
         delivery_date: string;
+        invoice_amount: number;
+        currency: string;
         payment_terms: string;
         invoice_description: string;
         order_number: string;
@@ -590,31 +573,52 @@ interface ApiResponse {
         quantity: number;
         unit_price: number;
         total_weight_kg: number;
+        requested_financing_amount: number;
         requested_advance_rate: number;
         repayment_period: string;
         buyers_id: {
           _id: string;
           buyer_company_name: string;
           registration_number: string;
+          employee_id: string;
           country: string;
           buyer_address: string;
           contact_email: string;
           contact_phone: string;
           credit_limit: number;
           status: string;
+          action_type: number;
+          createdAt: string;
+          updatedAt: string;
+          __v: number;
         };
+        employee_id: string;
         invoice_documents: {
           fcr: string;
           gd: string;
           bill_of_lading: string;
           packing_list: string;
+          _id: string;
         };
+        company_id: string;
+        status: string;
+        action_type: number;
+        createdAt: string;
+        updatedAt: string;
+        __v: number;
         timeline: {
+          _id: string;
+          invoice_id: string;
           steps: Array<{
             name: string;
             status: string;
             date: string | null;
+            description: string | null;
+            _id: string;
           }>;
+          createdAt: string;
+          updatedAt: string;
+          __v: number;
         };
       }>;
       totalCount: number;
@@ -623,10 +627,31 @@ interface ApiResponse {
       average_processing_time: number;
       avg_approval_percentage: number;
     };
+    bank_details: null | {
+      _id: string;
+      bank_name: string;
+      company_id: string;
+      account_holder_name: string;
+      account_number: string;
+      routing_number: string;
+      swift_bic_code: string;
+      account_type: string;
+      currency: string;
+      is_verified: number;
+      type: string;
+      bank_address: string;
+      iban: string;
+      action_type: number;
+      createdAt: string;
+      updatedAt: string;
+    };
     stats: {
       annual_revenue: number;
+      total_transaction_volume: number;
+      average_transaction_size: number;
     };
   };
+  misc_data: null | any;
 }
 
 interface PageProps {
@@ -649,6 +674,7 @@ export default function SellerApplicationDetailPage({ params }: PageProps) {
           method: "GET",
           params: { _id: unwrappedParams.id },
         });
+        debugger
         if (response?.data?.success) {
           setApiData(response.data);
         }
@@ -672,6 +698,9 @@ export default function SellerApplicationDetailPage({ params }: PageProps) {
     </div>
   );
 
+  console.log('apiData?.result?.company?',apiData)
+  debugger
+
   return (
     <div className="flex-1 space-y-6 p-6">
       {isLoading && <LoadingOverlay />}
@@ -679,7 +708,7 @@ export default function SellerApplicationDetailPage({ params }: PageProps) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button variant="ghost" onClick={() => router.back()}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
+            <ArrowLeft className="mr-2 h-4 w-4" />  
             {/* Back */}
           </Button>
           <div>
@@ -690,15 +719,15 @@ export default function SellerApplicationDetailPage({ params }: PageProps) {
                   : "No value found"}
               </h1>
               {getStatusBadge(
-                apiData?.result?.company?.document_status
-                  ? apiData.result.company.document_status
+                apiData?.result?.company?.status
+                  ? apiData.result.company.status
                   : "-"
               )}
-              <Badge variant="outline" className="bg-blue-50 text-blue-700">
+              {/* <Badge variant="outline" className="bg-blue-50 text-blue-700">
                 {apiData?.result?.company?._id
                   ? apiData.result.company._id
                   : "No value found"}
-              </Badge>
+              </Badge> */}
             </div>
             <p className="text-muted-foreground">
               Created{" "}
@@ -717,10 +746,10 @@ export default function SellerApplicationDetailPage({ params }: PageProps) {
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
-          <Button variant="outline" size="sm">
+          {/* <Button variant="outline" size="sm">
             <MessageSquare className="h-4 w-4 mr-2" />
             Contact Applicant
-          </Button>
+          </Button> */}
         </div>
       </div>
 
@@ -743,7 +772,7 @@ export default function SellerApplicationDetailPage({ params }: PageProps) {
           </CardContent>
         </Card>
 
-        <Card className="md:col-span-2">
+        {/* <Card className="md:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Performance Metrics
@@ -776,7 +805,7 @@ export default function SellerApplicationDetailPage({ params }: PageProps) {
               </div>
             </div>
           </CardContent>
-        </Card>
+        </Card> */}
         {/* <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Credit Rating</CardTitle>
@@ -1902,28 +1931,18 @@ export default function SellerApplicationDetailPage({ params }: PageProps) {
                         </Badge>
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        {apiData?.result?.company?.bank_statements
-                          ? "Uploaded"
-                          : "Not uploaded"}
+                        Not uploaded
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     {getStatusBadge(
-                      apiData?.result?.company?.document_status || "pending"
+                      apiData?.result?.company?.documents_status || "pending"
                     )}
-                    {apiData?.result?.company?.bank_statements && (
-                      <Button variant="outline" size="sm" asChild>
-                        <a
-                          href={`${BASE_URL}/${apiData.result.company.bank_statements}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          <Eye className="h-4 w-4 mr-2" />
-                          View
-                        </a>
-                      </Button>
-                    )}
+                    <Button variant="outline" size="sm" disabled>
+                      <Eye className="h-4 w-4 mr-2" />
+                      View
+                    </Button>
                   </div>
                 </div>
 
@@ -1947,30 +1966,18 @@ export default function SellerApplicationDetailPage({ params }: PageProps) {
                         </Badge>
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        {apiData?.result?.company
-                          ?.business_registration_certificate
-                          ? "Uploaded"
-                          : "Not uploaded"}
+                        Not uploaded
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     {getStatusBadge(
-                      apiData?.result?.company?.document_status || "pending"
+                      apiData?.result?.company?.documents_status || "pending"
                     )}
-                    {apiData?.result?.company
-                      ?.business_registration_certificate && (
-                      <Button variant="outline" size="sm" asChild>
-                        <a
-                          href={`${BASE_URL}/${apiData.result.company.business_registration_certificate}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          <Eye className="h-4 w-4 mr-2" />
-                          View
-                        </a>
-                      </Button>
-                    )}
+                    <Button variant="outline" size="sm" disabled>
+                      <Eye className="h-4 w-4 mr-2" />
+                      View
+                    </Button>
                   </div>
                 </div>
 
@@ -1994,28 +2001,18 @@ export default function SellerApplicationDetailPage({ params }: PageProps) {
                         </Badge>
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        {apiData?.result?.company?.financial_statements
-                          ? "Uploaded"
-                          : "Not uploaded"}
+                        Not uploaded
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     {getStatusBadge(
-                      apiData?.result?.company?.document_status || "pending"
+                      apiData?.result?.company?.documents_status || "pending"
                     )}
-                    {apiData?.result?.company?.financial_statements && (
-                      <Button variant="outline" size="sm" asChild>
-                        <a
-                          href={`${BASE_URL}/${apiData.result.company.financial_statements}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          <Eye className="h-4 w-4 mr-2" />
-                          View
-                        </a>
-                      </Button>
-                    )}
+                    <Button variant="outline" size="sm" disabled>
+                      <Eye className="h-4 w-4 mr-2" />
+                      View
+                    </Button>
                   </div>
                 </div>
 
@@ -2039,28 +2036,18 @@ export default function SellerApplicationDetailPage({ params }: PageProps) {
                         </Badge>
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        {apiData?.result?.company?.tax_registration_documents
-                          ? "Uploaded"
-                          : "Not uploaded"}
+                        Not uploaded
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     {getStatusBadge(
-                      apiData?.result?.company?.document_status || "pending"
+                      apiData?.result?.company?.documents_status || "pending"
                     )}
-                    {apiData?.result?.company?.tax_registration_documents && (
-                      <Button variant="outline" size="sm" asChild>
-                        <a
-                          href={`${BASE_URL}/${apiData.result.company.tax_registration_documents}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          <Eye className="h-4 w-4 mr-2" />
-                          View
-                        </a>
-                      </Button>
-                    )}
+                    <Button variant="outline" size="sm" disabled>
+                      <Eye className="h-4 w-4 mr-2" />
+                      View
+                    </Button>
                   </div>
                 </div>
 
@@ -2082,28 +2069,18 @@ export default function SellerApplicationDetailPage({ params }: PageProps) {
                         </Badge>
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        {apiData?.result?.company?.verification_image
-                          ? "Uploaded"
-                          : "Not uploaded"}
+                        Not uploaded
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     {getStatusBadge(
-                      apiData?.result?.company?.document_status || "pending"
+                      apiData?.result?.company?.documents_status || "pending"
                     )}
-                    {apiData?.result?.company?.verification_image && (
-                      <Button variant="outline" size="sm" asChild>
-                        <a
-                          href={`${BASE_URL}/${apiData.result.company.verification_image}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          <Eye className="h-4 w-4 mr-2" />
-                          View
-                        </a>
-                      </Button>
-                    )}
+                    <Button variant="outline" size="sm" disabled>
+                      <Eye className="h-4 w-4 mr-2" />
+                      View
+                    </Button>
                   </div>
                 </div>
               </div>
