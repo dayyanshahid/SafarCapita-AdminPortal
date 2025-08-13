@@ -627,7 +627,7 @@ interface ApiResponse {
       average_processing_time: number;
       avg_approval_percentage: number;
     };
-    bank_details: null | {
+    bank_details: null | Array<{
       _id: string;
       bank_name: string;
       company_id: string;
@@ -644,7 +644,7 @@ interface ApiResponse {
       action_type: number;
       createdAt: string;
       updatedAt: string;
-    };
+    }>;
     stats: {
       annual_revenue: number;
       total_transaction_volume: number;
@@ -764,7 +764,7 @@ export default function SellerApplicationDetailPage({ params }: PageProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ${apiData?.result?.stats?.annual_revenue || 0}
+              ${apiData?.result?.stats?.annual_revenue.toFixed(2) || 0}
             </div>
             <p className="text-xs text-muted-foreground">
               {apiData?.result?.company?.no_of_employees || "-"} employees
@@ -1336,59 +1336,120 @@ export default function SellerApplicationDetailPage({ params }: PageProps) {
               </CardContent>
             </Card>
 
-            {/* Banking Information */}
+                        {/* Banking Information */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Banknote className="h-5 w-5" />
                   Banking Information
+                  {apiData?.result?.bank_details && apiData.result.bank_details.length > 0 && (
+                    <Badge variant="outline" className="ml-2">
+                      {apiData.result.bank_details.length} Account{apiData.result.bank_details.length > 1 ? 's' : ''}
+                    </Badge>
+                  )}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label className="text-sm font-medium">Bank Name</Label>
-                  <p className="text-sm text-muted-foreground">
-                    {apiData?.result?.bank_details?.bank_name || "-"}
-                  </p>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-sm font-medium">
-                      Account Number
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                      {apiData?.result?.bank_details?.account_number || "-"}
-                    </p>
+              <CardContent className="space-y-6 max-h-[400px] overflow-y-auto pr-2">
+                {apiData?.result?.bank_details && apiData.result.bank_details.length > 0 ? (
+                  apiData.result.bank_details.map((bank, index) => (
+                    <div key={bank._id || index} className="space-y-4">
+                      {/* Bank Account Header */}
+                      {apiData.result.bank_details && apiData.result.bank_details.length > 1 && (
+                        <div className="flex items-center justify-between pb-2 border-b">
+                          <h4 className="text-md font-bold text-gray-700">
+                            Bank Account {index + 1}
+                          </h4>
+                          
+                        </div>
+                      )}
+                      
+                      {/* Bank Details */}
+                      <div className="space-y-4">
+                        <div>
+                          <Label className="text-sm font-medium">Bank Name</Label>
+                          <p className="text-sm text-muted-foreground">
+                            {bank.bank_name || "-"}
+                          </p>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label className="text-sm font-medium">
+                              Account Number
+                            </Label>
+                            <p className="text-sm text-muted-foreground">
+                              {bank.account_number || "-"}
+                            </p>
+                          </div>
+                          <div>
+                            <Label className="text-sm font-medium">
+                              Routing Number
+                            </Label>
+                            <p className="text-sm text-muted-foreground">
+                              {bank.routing_number || "-"}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label className="text-sm font-medium">SWIFT Code</Label>
+                            <p className="text-sm text-muted-foreground">
+                              {bank.swift_bic_code || "-"}
+                            </p>
+                          </div>
+                          <div>
+                            <Label className="text-sm font-medium">Currency</Label>
+                            <p className="text-sm text-muted-foreground">
+                              {bank.currency || "-"}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label className="text-sm font-medium">Account Type</Label>
+                            <p className="text-sm text-muted-foreground">
+                              {bank.account_type || "-"}
+                            </p>
+                          </div>
+                          <div>
+                            <Label className="text-sm font-medium">Account Holder</Label>
+                            <p className="text-sm text-muted-foreground">
+                              {bank.account_holder_name || "-"}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <Label className="text-sm font-medium">Bank Address</Label>
+                          <p className="text-sm text-muted-foreground">
+                            {bank.bank_address || "-"}
+                          </p>
+                        </div>
+                        
+                        {bank.iban && (
+                          <div>
+                            <Label className="text-sm font-medium">IBAN</Label>
+                            <p className="text-sm text-muted-foreground">
+                              {bank.iban}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Separator between multiple accounts */}
+                      {apiData.result.bank_details && index < apiData.result.bank_details.length - 1 && (
+                        <Separator className="my-4" />
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-6">
+                    <Banknote className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                    <p className="text-sm text-gray-500">No banking information available</p>
                   </div>
-                  <div>
-                    <Label className="text-sm font-medium">
-                      Routing Number
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                      {apiData?.result?.bank_details?.routing_number || "-"}
-                    </p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-sm font-medium">SWIFT Code</Label>
-                    <p className="text-sm text-muted-foreground">
-                      {apiData?.result?.bank_details?.swift_bic_code || "-"}
-                    </p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium">Currency</Label>
-                    <p className="text-sm text-muted-foreground">
-                      {apiData?.result?.bank_details?.currency || "-"}
-                    </p>
-                  </div>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium">Bank Address</Label>
-                  <p className="text-sm text-muted-foreground">
-                    {apiData?.result?.bank_details?.bank_address || "-"}
-                  </p>
-                </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -1724,8 +1785,8 @@ export default function SellerApplicationDetailPage({ params }: PageProps) {
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle className="flex items-center gap-2">
-                        <DollarSign className="h-5 w-5" />
-                        {invoice._id}
+                        {/* <DollarSign className="h-5 w-5" /> */}
+                        {invoice?.order_number}
                       </CardTitle>
                       <CardDescription>
                         {invoice.invoice_number} •{" "}
