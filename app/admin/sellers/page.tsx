@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { useSelector } from "react-redux";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import {
   getSellerManagementPortalApiCall,
   getCompanyListApiCall,
   updateCompanyStatusApiCall,
+  updateCompanyLimitApiCall,
 } from "@/Api's/repo";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -56,6 +57,12 @@ import {
 import { DashboardHeader } from "@/components/dashboard-header";
 import { ManualApplicationForm } from "@/components/admin/manual-application-form";
 import { AdvancedFilters } from "@/components/admin/advanced-filters";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 // Types
 interface CompanyListResponse {
@@ -574,7 +581,7 @@ const mockApplications: SellerApplication[] = [
 
 export default function UnifiedSellerManagementPage() {
   const router = useRouter();
-  const { toast } = useToast();
+  const { success, error } = useToast();
   const [companies, setCompanies] = useState<CompanyDetails[]>([]);
   const isLoading = useSelector((state: any) => state.loading);
   const [activeTab, setActiveTab] = useState("overview");
@@ -587,6 +594,13 @@ export default function UnifiedSellerManagementPage() {
     useState<CompanyListResponse | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showCreditLimitDialog, setShowCreditLimitDialog] = useState(false);
+  const [selectedCompanyId, setSelectedCompanyId] = useState("");
+  const [creditLimitData, setCreditLimitData] = useState({
+    credit_limit: "",
+    estimated_rate: "",
+    renew_rate: "",
+  });
 
   // Loading overlay component
   const LoadingOverlay = () => (
@@ -893,51 +907,108 @@ export default function UnifiedSellerManagementPage() {
     action: "approve" | "reject";
   } | null>(null);
 
+  const handleCreditLimitSubmit = async () => {
+    try {
+      // First API call - Update credit limit
+      const limitResponse = await makeRequest({
+        url: updateCompanyLimitApiCall,
+        method: "POST",
+        data: {
+          _id: selectedCompanyId,
+          ...creditLimitData,
+        },
+      });
+
+      if (limitResponse.data.success) {
+        success("Credit limit details updated successfully");
+
+        // Second API call - Update status
+        try {
+          setIsUpdatingStatus({ id: selectedCompanyId, action: "approve" });
+
+          const response = await makeRequest({
+            url: updateCompanyStatusApiCall,
+            method: "POST",
+            data: {
+              _id: selectedCompanyId,
+              status: "Approved",
+            },
+          });
+
+          if (response.data.success) {
+            await fetchCompanyList();
+            success("Company approved and credit limit set successfully");
+            setShowCreditLimitDialog(false);
+            setCreditLimitData({
+              credit_limit: "",
+              estimated_rate: "",
+              renew_rate: "",
+            });
+          } else {
+            error(response.data.message || "Failed to update company status");
+          }
+        } catch (err) {
+          console.error("Error updating company status:", err);
+          error(
+            err instanceof Error
+              ? err.message
+              : "Failed to update company status. Please try again."
+          );
+        } finally {
+          setIsUpdatingStatus(null);
+        }
+      } else {
+        error(limitResponse.data.message || "Failed to update credit limit");
+      }
+    } catch (err) {
+      console.error("Error updating credit limit:", err);
+      error(
+        err instanceof Error
+          ? err.message
+          : "Failed to update credit limit. Please try again."
+      );
+      setIsUpdatingStatus(null);
+    }
+  };
+
   const handleApplicationAction = async (
     applicationId: string,
     action: "approve" | "reject",
     notes?: string
   ) => {
+    // For approve action, show the credit limit dialog
+    if (action === "approve") {
+      setSelectedCompanyId(applicationId);
+      setShowCreditLimitDialog(true);
+      return;
+    }
+
+    // For reject action, update status directly
     try {
-      setIsUpdatingStatus({ id: applicationId, action });
+      setIsUpdatingStatus({ id: applicationId, action: "reject" });
 
-      const response = await fetch(updateCompanyStatusApiCall, {
+      const response = await makeRequest({
+        url: updateCompanyStatusApiCall,
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
+        data: {
           _id: applicationId,
-          status: action === "approve" ? "Approved" : "Rejected",
-        }),
+          status: "Rejected",
+        },
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to update status");
+      if (response.data.success) {
+        await fetchCompanyList();
+        success("Company rejected successfully");
+      } else {
+        error(response.data.message || "Failed to reject company");
       }
-
-      // Refresh the data to get updated status
-      await fetchCompanyList();
-
-      toast({
-        title: "Success",
-        description: `Company ${
-          action === "approve" ? "approved" : "rejected"
-        } successfully`,
-        variant: "success",
-      });
-    } catch (error) {
-      console.error("Error updating company status:", error);
-      toast({
-        title: "Error",
-        description:
-          error instanceof Error
-            ? error.message
-            : "Failed to update company status",
-        variant: "error",
-      });
+    } catch (err) {
+      console.error("Error updating company status:", err);
+      error(
+        err instanceof Error
+          ? err.message
+          : "Failed to reject company. Please try again."
+      );
     } finally {
       setIsUpdatingStatus(null);
     }
@@ -973,6 +1044,9 @@ export default function UnifiedSellerManagementPage() {
             }
           : app
       )
+    );
+    success(
+      `Document ${action === "approve" ? "approved" : "rejected"} successfully`
     );
   };
 
@@ -1766,6 +1840,89 @@ export default function UnifiedSellerManagementPage() {
         onApplyFilters={handleAdvancedFiltersApply}
         activeFilters={advancedFilters}
       />
+
+      {/* Credit Limit Dialog */}
+      <Dialog
+        open={showCreditLimitDialog}
+        onOpenChange={setShowCreditLimitDialog}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Set Credit Limit Details</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <label htmlFor="credit_limit" className="text-sm font-medium">
+                Credit Limit
+              </label>
+              <Input
+                id="credit_limit"
+                type="number"
+                value={creditLimitData.credit_limit}
+                onChange={(e) =>
+                  setCreditLimitData((prev) => ({
+                    ...prev,
+                    credit_limit: e.target.value,
+                  }))
+                }
+                placeholder="Enter credit limit"
+              />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="estimated_rate" className="text-sm font-medium">
+                Estimated Rate
+              </label>
+              <Input
+                id="estimated_rate"
+                type="number"
+                value={creditLimitData.estimated_rate}
+                onChange={(e) =>
+                  setCreditLimitData((prev) => ({
+                    ...prev,
+                    estimated_rate: e.target.value,
+                  }))
+                }
+                placeholder="Enter estimated rate"
+              />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="renew_rate" className="text-sm font-medium">
+                Renew Rate
+              </label>
+              <Input
+                id="renew_rate"
+                type="number"
+                value={creditLimitData.renew_rate}
+                onChange={(e) =>
+                  setCreditLimitData((prev) => ({
+                    ...prev,
+                    renew_rate: e.target.value,
+                  }))
+                }
+                placeholder="Enter renew rate"
+              />
+            </div>
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setShowCreditLimitDialog(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleCreditLimitSubmit}
+                disabled={
+                  !creditLimitData.credit_limit ||
+                  !creditLimitData.estimated_rate ||
+                  !creditLimitData.renew_rate
+                }
+              >
+                Submit
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

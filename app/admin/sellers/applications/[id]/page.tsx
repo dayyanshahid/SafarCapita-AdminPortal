@@ -13,7 +13,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import makeRequest from "@/Api's/ApiHelper";
-import { getCompanyDetailById } from "@/Api's/repo";
+import {
+  getCompanyDetailById,
+  getCompanyLimitsApiCall,
+  updateCompanyLimitApiCall,
+} from "@/Api's/repo";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -47,6 +51,15 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 
 const BASE_URL = process.env.NEXT_PUBLIC_IMAGE_URL;
 
@@ -663,8 +676,21 @@ export default function SellerApplicationDetailPage({ params }: PageProps) {
   const [activeTab, setActiveTab] = useState("overview");
   const [newNote, setNewNote] = useState("");
   const [apiData, setApiData] = useState<ApiResponse | null>(null);
+  const [creditLimitData, setCreditLimitData] = useState<{
+    credit_limit: string;
+    estimated_rate: string;
+    renew_rate: string;
+  } | null>(null);
   const router = useRouter();
   const isLoading = useSelector((state: RootState) => state.loading);
+  const { success, error: showError } = useToast();
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editData, setEditData] = useState({
+    credit_limit: "",
+    estimated_rate: "",
+    renew_rate: "",
+  });
+  const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
     const fetchCompanyDetails = async () => {
@@ -674,7 +700,6 @@ export default function SellerApplicationDetailPage({ params }: PageProps) {
           method: "GET",
           params: { _id: unwrappedParams.id },
         });
-        debugger
         if (response?.data?.success) {
           setApiData(response.data);
         }
@@ -683,7 +708,23 @@ export default function SellerApplicationDetailPage({ params }: PageProps) {
       }
     };
 
+    const fetchCreditLimits = async () => {
+      try {
+        const response = await makeRequest({
+          url: getCompanyLimitsApiCall,
+          method: "GET",
+          params: { _id: unwrappedParams.id },
+        });
+        if (response?.data?.success) {
+          setCreditLimitData(response.data.result);
+        }
+      } catch (error) {
+        console.error("Error fetching credit limits:", error);
+      }
+    };
+
     fetchCompanyDetails();
+    fetchCreditLimits();
   }, [unwrappedParams.id]);
 
   // We'll handle contracts and financing in separate API integrations
@@ -698,8 +739,35 @@ export default function SellerApplicationDetailPage({ params }: PageProps) {
     </div>
   );
 
-  console.log('apiData?.result?.company?',apiData)
-  debugger
+  console.log("apiData?.result?.company?", apiData);
+  debugger;
+
+  const handleEditSubmit = async () => {
+    try {
+      setIsUpdating(true);
+      const response = await makeRequest({
+        url: updateCompanyLimitApiCall,
+        method: "POST",
+        data: {
+          _id: unwrappedParams.id,
+          ...editData,
+        },
+      });
+
+      if (response.data.success) {
+        success("Credit limits updated successfully");
+        setCreditLimitData(editData);
+        setShowEditDialog(false);
+      } else {
+        showError(response.data.message || "Failed to update credit limits");
+      }
+    } catch (err) {
+      console.error("Error updating credit limits:", err);
+      showError("Failed to update credit limits. Please try again.");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   return (
     <div className="flex-1 space-y-6 p-6">
@@ -708,7 +776,7 @@ export default function SellerApplicationDetailPage({ params }: PageProps) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button variant="ghost" onClick={() => router.back()}>
-            <ArrowLeft className="mr-2 h-4 w-4" />  
+            <ArrowLeft className="mr-2 h-4 w-4" />
             {/* Back */}
           </Button>
           <div>
@@ -874,13 +942,13 @@ export default function SellerApplicationDetailPage({ params }: PageProps) {
         onValueChange={setActiveTab}
         className="space-y-6"
       >
-        <TabsList className="grid w-full grid-cols-5  ">
+        <TabsList className="grid w-full grid-cols-6  ">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="company">Company Info</TabsTrigger>
           <TabsTrigger value="contracts">Contracts</TabsTrigger>
           <TabsTrigger value="financing">Financing</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
-          {/* <TabsTrigger value="performance">Performance</TabsTrigger> */}
+          <TabsTrigger value="factoring-rate">Factoring Rate</TabsTrigger>
           {/* <TabsTrigger value="actions">Actions</TabsTrigger> */}
         </TabsList>
 
@@ -1336,42 +1404,47 @@ export default function SellerApplicationDetailPage({ params }: PageProps) {
               </CardContent>
             </Card>
 
-                        {/* Banking Information */}
+            {/* Banking Information */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Banknote className="h-5 w-5" />
                   Banking Information
-                  {apiData?.result?.bank_details && apiData.result.bank_details.length > 0 && (
-                    <Badge variant="outline" className="ml-2">
-                      {apiData.result.bank_details.length} Account{apiData.result.bank_details.length > 1 ? 's' : ''}
-                    </Badge>
-                  )}
+                  {apiData?.result?.bank_details &&
+                    apiData.result.bank_details.length > 0 && (
+                      <Badge variant="outline" className="ml-2">
+                        {apiData.result.bank_details.length} Account
+                        {apiData.result.bank_details.length > 1 ? "s" : ""}
+                      </Badge>
+                    )}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6 max-h-[400px] overflow-y-auto pr-2">
-                {apiData?.result?.bank_details && apiData.result.bank_details.length > 0 ? (
+                {apiData?.result?.bank_details &&
+                apiData.result.bank_details.length > 0 ? (
                   apiData.result.bank_details.map((bank, index) => (
                     <div key={bank._id || index} className="space-y-4">
                       {/* Bank Account Header */}
-                      {apiData.result.bank_details && apiData.result.bank_details.length > 1 && (
-                        <div className="flex items-center justify-between pb-2 border-b">
-                          <h4 className="text-md font-bold text-gray-700">
-                            Bank Account {index + 1}
-                          </h4>
-                          
-                        </div>
-                      )}
-                      
+                      {apiData.result.bank_details &&
+                        apiData.result.bank_details.length > 1 && (
+                          <div className="flex items-center justify-between pb-2 border-b">
+                            <h4 className="text-md font-bold text-gray-700">
+                              Bank Account {index + 1}
+                            </h4>
+                          </div>
+                        )}
+
                       {/* Bank Details */}
                       <div className="space-y-4">
                         <div>
-                          <Label className="text-sm font-medium">Bank Name</Label>
+                          <Label className="text-sm font-medium">
+                            Bank Name
+                          </Label>
                           <p className="text-sm text-muted-foreground">
                             {bank.bank_name || "-"}
                           </p>
                         </div>
-                        
+
                         <div className="grid grid-cols-2 gap-4">
                           <div>
                             <Label className="text-sm font-medium">
@@ -1390,44 +1463,54 @@ export default function SellerApplicationDetailPage({ params }: PageProps) {
                             </p>
                           </div>
                         </div>
-                        
+
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <Label className="text-sm font-medium">SWIFT Code</Label>
+                            <Label className="text-sm font-medium">
+                              SWIFT Code
+                            </Label>
                             <p className="text-sm text-muted-foreground">
                               {bank.swift_bic_code || "-"}
                             </p>
                           </div>
                           <div>
-                            <Label className="text-sm font-medium">Currency</Label>
+                            <Label className="text-sm font-medium">
+                              Currency
+                            </Label>
                             <p className="text-sm text-muted-foreground">
                               {bank.currency || "-"}
                             </p>
                           </div>
                         </div>
-                        
+
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <Label className="text-sm font-medium">Account Type</Label>
+                            <Label className="text-sm font-medium">
+                              Account Type
+                            </Label>
                             <p className="text-sm text-muted-foreground">
                               {bank.account_type || "-"}
                             </p>
                           </div>
                           <div>
-                            <Label className="text-sm font-medium">Account Holder</Label>
+                            <Label className="text-sm font-medium">
+                              Account Holder
+                            </Label>
                             <p className="text-sm text-muted-foreground">
                               {bank.account_holder_name || "-"}
                             </p>
                           </div>
                         </div>
-                        
+
                         <div>
-                          <Label className="text-sm font-medium">Bank Address</Label>
+                          <Label className="text-sm font-medium">
+                            Bank Address
+                          </Label>
                           <p className="text-sm text-muted-foreground">
                             {bank.bank_address || "-"}
                           </p>
                         </div>
-                        
+
                         {bank.iban && (
                           <div>
                             <Label className="text-sm font-medium">IBAN</Label>
@@ -1437,17 +1520,20 @@ export default function SellerApplicationDetailPage({ params }: PageProps) {
                           </div>
                         )}
                       </div>
-                      
+
                       {/* Separator between multiple accounts */}
-                      {apiData.result.bank_details && index < apiData.result.bank_details.length - 1 && (
-                        <Separator className="my-4" />
-                      )}
+                      {apiData.result.bank_details &&
+                        index < apiData.result.bank_details.length - 1 && (
+                          <Separator className="my-4" />
+                        )}
                     </div>
                   ))
                 ) : (
                   <div className="text-center py-6">
                     <Banknote className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                    <p className="text-sm text-gray-500">No banking information available</p>
+                    <p className="text-sm text-gray-500">
+                      No banking information available
+                    </p>
                   </div>
                 )}
               </CardContent>
@@ -2149,93 +2235,152 @@ export default function SellerApplicationDetailPage({ params }: PageProps) {
           </Card>
         </TabsContent>
 
-        {/* Performance Tab */}
-        <TabsContent value="performance" className="space-y-6">
+        {/* factoring-rate Tab */}
+        <TabsContent value="factoring-rate" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5" />
-                Performance Analytics
-              </CardTitle>
-              <CardDescription>
-                Key performance indicators and metrics
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5" />
+                    Credit Limits & Rates
+                  </CardTitle>
+                  <CardDescription>
+                    Approved credit limits and rates for this seller
+                  </CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setEditData({
+                      credit_limit: creditLimitData?.credit_limit || "",
+                      estimated_rate: creditLimitData?.estimated_rate || "",
+                      renew_rate: creditLimitData?.renew_rate || "",
+                    });
+                    setShowEditDialog(true);
+                  }}
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit Limits
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-4 md:grid-cols-3">
                 <div className="text-center p-4 border rounded-lg">
                   <div className="text-2xl font-bold text-green-600">
-                    {formatCurrency(
-                      mockApplication.performanceMetrics.totalTransactionVolume,
-                      mockApplication.currency
-                    )}
+                    ${creditLimitData?.credit_limit || "0"}
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    Total Transaction Volume
+                    Credit Limit
                   </div>
                 </div>
                 <div className="text-center p-4 border rounded-lg">
                   <div className="text-2xl font-bold text-blue-600">
-                    {formatCurrency(
-                      mockApplication.performanceMetrics.averageTransactionSize,
-                      mockApplication.currency
-                    )}
+                    {creditLimitData?.estimated_rate || "0"}%
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    Average Transaction Size
+                    Estimated Rate
                   </div>
                 </div>
-                {/* <div className="text-center p-4 border rounded-lg">
+                <div className="text-center p-4 border rounded-lg">
                   <div className="text-2xl font-bold text-purple-600">
-                    {mockApplication.performanceMetrics.onTimePaymentRate}%
+                    {creditLimitData?.renew_rate || "0"}%
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    On-Time Payment Rate
-                  </div>
-                </div> */}
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2 mt-6">
-                <div>
-                  <Label className="text-sm font-medium">
-                    Credit Utilization
-                  </Label>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Progress
-                      value={
-                        mockApplication.performanceMetrics.creditUtilization
-                      }
-                      className="flex-1"
-                    />
-                    <span className="text-sm font-medium">
-                      {mockApplication.performanceMetrics.creditUtilization}%
-                    </span>
+                    Renew Rate
                   </div>
                 </div>
-                <div>
-                  <Label className="text-sm font-medium">Risk Score</Label>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Progress
-                      value={mockApplication.performanceMetrics.riskScore}
-                      className="flex-1"
-                    />
-                    <span className="text-sm font-medium">
-                      {mockApplication.performanceMetrics.riskScore}%
-                    </span>
-                  </div>
-                </div>
-                {/* <div>
-                  <Label className="text-sm font-medium">
-                    Relationship Duration
-                  </Label>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {mockApplication.performanceMetrics.relationshipDuration}{" "}
-                    months
-                  </p>
-                </div> */}
               </div>
             </CardContent>
           </Card>
+
+          {/* Edit Dialog */}
+          <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Edit Credit Limits & Rates</DialogTitle>
+                <DialogDescription>
+                  Update the credit limit and rate information for this seller.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="credit_limit">Credit Limit ($)</Label>
+                  <Input
+                    id="credit_limit"
+                    type="number"
+                    value={editData.credit_limit}
+                    onChange={(e) =>
+                      setEditData((prev) => ({
+                        ...prev,
+                        credit_limit: e.target.value,
+                      }))
+                    }
+                    placeholder="Enter credit limit"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="estimated_rate">Estimated Rate (%)</Label>
+                  <Input
+                    id="estimated_rate"
+                    type="number"
+                    value={editData.estimated_rate}
+                    onChange={(e) =>
+                      setEditData((prev) => ({
+                        ...prev,
+                        estimated_rate: e.target.value,
+                      }))
+                    }
+                    placeholder="Enter estimated rate"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="renew_rate">Renew Rate (%)</Label>
+                  <Input
+                    id="renew_rate"
+                    type="number"
+                    value={editData.renew_rate}
+                    onChange={(e) =>
+                      setEditData((prev) => ({
+                        ...prev,
+                        renew_rate: e.target.value,
+                      }))
+                    }
+                    placeholder="Enter renew rate"
+                  />
+                </div>
+                <div className="flex justify-end gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowEditDialog(false)}
+                    disabled={isUpdating}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleEditSubmit}
+                    disabled={
+                      isUpdating ||
+                      !editData.credit_limit ||
+                      !editData.estimated_rate ||
+                      !editData.renew_rate
+                    }
+                  >
+                    {isUpdating ? (
+                      <>
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent mr-2" />
+                        Updating...
+                      </>
+                    ) : (
+                      "Save Changes"
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
 
         {/* Actions Tab */}
