@@ -27,3 +27,10 @@ export const updateCompanyLimitApiCall =
 export const getCompanyLimitsApiCall =
   process.env.NEXT_PUBLIC_API_BASE_URL +
   "safar-capital/api/company/get-seller-limits";
+export const getAllContractsApiCall =
+  process.env.NEXT_PUBLIC_API_BASE_URL + "safar-capital/api/contract/get-all";
+export const createAndUpdateContractApiCall =
+  process.env.NEXT_PUBLIC_API_BASE_URL + "safar-capital/api/contract/post";
+export const contractUpdateStatusApiCall =
+  process.env.NEXT_PUBLIC_API_BASE_URL +
+  "safar-capital/api/contract/update-status";

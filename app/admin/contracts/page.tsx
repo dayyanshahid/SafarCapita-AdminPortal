@@ -1,7 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/components/ui/use-toast";
+import makeRequest from "../../../Api's/ApiHelper";
+import {
+  getAllContractsApiCall,
+  createAndUpdateContractApiCall,
+  getCompanyListApiCall,
+  contractUpdateStatusApiCall,
+} from "@/Api's/repo";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -19,6 +27,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
@@ -53,6 +67,7 @@ import {
   DollarSign,
   Send,
   AlertTriangle,
+  MoreVertical,
 } from "lucide-react";
 
 // Mock data for contracts
@@ -322,6 +337,7 @@ SUPPLY CHAIN TERMS:
 ];
 
 export default function ContractManagementPage() {
+  const { toast } = useToast();
   const [selectedContract, setSelectedContract] = useState<any>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -329,18 +345,81 @@ export default function ContractManagementPage() {
   const [isNewContractOpen, setIsNewContractOpen] = useState(false);
   const [isNewTemplateOpen, setIsNewTemplateOpen] = useState(false);
   const [isGenerateContractOpen, setIsGenerateContractOpen] = useState(false);
+  const [isRejectionDialogOpen, setIsRejectionDialogOpen] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [selectedContractForRejection, setSelectedContractForRejection] =
+    useState<any>(null);
+  const [isStatusUpdating, setIsStatusUpdating] = useState(false);
   const [contractFormData, setContractFormData] = useState<any>({});
   const [templateFormData, setTemplateFormData] = useState<any>({});
 
+  // Client dropdown state
+  const [clients, setClients] = useState<any[]>([]);
+  const [clientsLoading, setClientsLoading] = useState(false);
+  const [clientsError, setClientsError] = useState(false);
+  const [clientsPage, setClientsPage] = useState(1);
+  const [hasMoreClients, setHasMoreClients] = useState(true);
+  const [totalClientsPages, setTotalClientsPages] = useState(1);
+
+  // Contracts data state
+  const [contracts, setContracts] = useState<any[]>([]);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchContracts = async (page = 1) => {
+    try {
+      setIsLoading(true);
+      const response = await makeRequest({
+        url: getAllContractsApiCall,
+        method: "GET",
+        params: {
+          page_number: page,
+          // Add any other query parameters if needed
+        },
+      });
+
+      const data = response.data;
+      if (data.success) {
+        setContracts(data.result);
+        setTotalRecords(data.total_records);
+        setCurrentPage(data.page_number);
+        setTotalPages(data.total_pages);
+      }
+    } catch (error) {
+      console.error("Error fetching contracts:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchContracts(currentPage);
+  }, [currentPage]); // Re-fetch when page changes
+
+  useEffect(() => {
+    if (isNewContractOpen) {
+      // Reset states and fetch first page
+      setClients([]);
+      setClientsPage(1);
+      setHasMoreClients(true);
+      setClientsError(false);
+      fetchClients(1, false);
+    }
+  }, [isNewContractOpen]);
+
   const getStatusBadge = (status: string) => {
     const variants = {
-      active: "bg-green-100 text-green-800",
-      pending_signature: "bg-yellow-100 text-yellow-800",
-      expired: "bg-red-100 text-red-800",
-      draft: "bg-gray-100 text-gray-800",
-      terminated: "bg-red-100 text-red-800",
+      Active: "bg-green-100 text-green-800",
+      Pending: "bg-yellow-100 text-yellow-800",
+      Expired: "bg-red-100 text-red-800",
+      approval_required: "bg-blue-100 text-blue-800",
+      Rejected: "bg-red-100 text-red-800",
     };
-    return variants[status as keyof typeof variants] || variants.draft;
+    return (
+      variants[status as keyof typeof variants] || "bg-gray-100 text-gray-800"
+    );
   };
 
   const getRiskBadge = (risk: string) => {
@@ -371,21 +450,116 @@ export default function ContractManagementPage() {
     }
   };
 
-  const filteredContracts = contractsData.filter((contract) => {
+  const filteredContracts = contracts.filter((contract) => {
     const matchesSearch =
-      contract.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      contract.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      contract.id.toLowerCase().includes(searchTerm.toLowerCase());
+      contract.contract_title
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      contract.company_id.legal_company_name
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase());
     const matchesStatus =
-      statusFilter === "all" || contract.status === statusFilter;
+      statusFilter === "all" ||
+      contract.status.toLowerCase() === statusFilter.toLowerCase();
     return matchesSearch && matchesStatus;
   });
 
-  const handleCreateContract = () => {
-    console.log("Creating contract:", contractFormData);
-    setIsNewContractOpen(false);
-    setContractFormData({});
-    // Here you would typically make an API call to create the contract
+  const fetchClients = async (page = 1, append = false) => {
+    try {
+      setClientsLoading(true);
+      setClientsError(false);
+
+      const response = await makeRequest({
+        url: getCompanyListApiCall,
+        method: "GET",
+        params: {
+          page_number: page,
+          page_size: 20, // Fetch 20 records at a time
+        },
+      });
+
+      if (response.data.success) {
+        setClients((prev) =>
+          append ? [...prev, ...response.data.result] : response.data.result
+        );
+        setTotalClientsPages(response.data.total_pages);
+        setHasMoreClients(page < response.data.total_pages);
+        setClientsPage(page);
+      } else {
+        setClientsError(true);
+        toast({
+          title: "Error",
+          description: "Failed to fetch clients. Please try again.",
+          variant: "error",
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching clients:", error);
+      setClientsError(true);
+      toast({
+        title: "Error",
+        description: "Failed to fetch clients. Please try again.",
+        variant: "error",
+      });
+    } finally {
+      setClientsLoading(false);
+    }
+  };
+
+  const handleCreateContract = async () => {
+    try {
+      // Validate required fields
+      if (
+        !contractFormData.clientId ||
+        !contractFormData.contractType ||
+        !contractFormData.value
+      ) {
+        toast({
+          title: "Error",
+          description:
+            "Please fill in all required fields (Client, Contract Type, and Amount)",
+          variant: "error",
+        });
+        return;
+      }
+
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append("company_id", contractFormData.clientId);
+      formData.append("contract_title", contractFormData.contractType);
+      formData.append(
+        "contract_description",
+        contractFormData.description || ""
+      );
+      formData.append("value", contractFormData.value);
+      formData.append("start_date", contractFormData.startDate);
+      formData.append("end_date", contractFormData.endDate);
+
+      if (contractFormData.contractImage) {
+        formData.append(
+          "admin_signed_contract",
+          contractFormData.contractImage
+        );
+      }
+
+      // Make API call to create contract
+      const response = await makeRequest({
+        url: createAndUpdateContractApiCall,
+        method: "POST",
+        data: formData,
+      });
+
+      if (response.data.success) {
+        // Refresh the contracts list
+        fetchContracts(currentPage);
+        setIsNewContractOpen(false);
+        setContractFormData({});
+        alert("Contract created successfully");
+      }
+    } catch (error) {
+      console.error("Error creating contract:", error);
+      alert("Failed to create contract. Please try again.");
+    }
   };
 
   const handleGenerateContract = () => {
@@ -404,6 +578,99 @@ export default function ContractManagementPage() {
     // Here you would integrate with DocuSign or similar service
   };
 
+  const getDocumentUrl = (path: string) => {
+    if (!path) return "";
+    return `${process.env.NEXT_PUBLIC_IMAGE_URL}${path.replace(/\\/g, "/")}`;
+  };
+
+  const handleDownloadDocument = async (
+    documentPath: string,
+    fileName: string
+  ) => {
+    try {
+      const url = getDocumentUrl(documentPath);
+      const response = await fetch(url);
+      const blob = await response.blob();
+
+      // Create a temporary link element
+      const link = document.createElement("a");
+      link.href = window.URL.createObjectURL(blob);
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error("Error downloading document:", error);
+      toast({
+        title: "Error",
+        description: "Failed to download document. Please try again.",
+        variant: "error",
+      });
+    }
+  };
+
+  const handleViewDocument = (documentPath: string) => {
+    const url = getDocumentUrl(documentPath);
+    window.open(url, "_blank");
+  };
+
+  const handleUpdateStatus = async (
+    contractId: string,
+    newStatus: string,
+    statusDescription?: string
+  ) => {
+    try {
+      setIsStatusUpdating(true);
+      const data = {
+        _id: contractId,
+        status: newStatus,
+        ...(statusDescription && { status_description: statusDescription }),
+      };
+
+      const response = await makeRequest({
+        url: contractUpdateStatusApiCall,
+        method: "POST",
+        data,
+      });
+
+      if (response.data.success) {
+        toast({
+          title: "Success",
+          description: "Information updated successfully",
+          variant: "success",
+        });
+
+        // Reset rejection states if needed
+        if (newStatus === "Rejected") {
+          setRejectionReason("");
+          setIsRejectionDialogOpen(false);
+          setSelectedContractForRejection(null);
+        }
+
+        // Refresh the contracts list
+        await fetchContracts(currentPage);
+      }
+    } catch (error) {
+      console.error("Error updating contract status:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update contract status. Please try again.",
+        variant: "error",
+      });
+    } finally {
+      setIsStatusUpdating(false);
+    }
+  };
+
+  const handleStatusAction = (contractId: string, newStatus: string) => {
+    if (newStatus === "Active") {
+      handleUpdateStatus(contractId, newStatus);
+    } else if (newStatus === "Rejected") {
+      setSelectedContractForRejection(contractId);
+      setIsRejectionDialogOpen(true);
+    }
+  };
+
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       <div className="flex items-center justify-between space-y-2">
@@ -419,11 +686,11 @@ export default function ContractManagementPage() {
       </div>
 
       <Tabs defaultValue="contracts" className="space-y-4">
-        <TabsList>
+        {/* <TabsList>
           <TabsTrigger value="contracts">Contracts</TabsTrigger>
           <TabsTrigger value="templates">Templates</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
-        </TabsList>
+        </TabsList> */}
 
         {/* Contracts Tab */}
         <TabsContent value="contracts" className="space-y-4">
@@ -437,9 +704,12 @@ export default function ContractManagementPage() {
                 <FileText className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{contractsData.length}</div>
+                <div className="text-2xl font-bold">{totalRecords}</div>
                 <p className="text-xs text-muted-foreground">
-                  {contractsData.filter((c) => c.status === "active").length}{" "}
+                  {
+                    contracts.filter((c) => c.status.toLowerCase() === "active")
+                      .length
+                  }{" "}
                   active
                 </p>
               </CardContent>
@@ -454,8 +724,8 @@ export default function ContractManagementPage() {
               <CardContent>
                 <div className="text-2xl font-bold">
                   $
-                  {contractsData
-                    .reduce((sum, c) => sum + c.value, 0)
+                  {contracts
+                    .reduce((sum, c) => sum + (Number(c.value) || 0), 0)
                     .toLocaleString()}
                 </div>
                 <p className="text-xs text-muted-foreground">Portfolio value</p>
@@ -471,27 +741,13 @@ export default function ContractManagementPage() {
               <CardContent>
                 <div className="text-2xl font-bold">
                   {
-                    contractsData.filter(
-                      (c) => c.status === "pending_signature"
+                    contracts.filter(
+                      (c) => c.status.toLowerCase() === "pending"
                     ).length
                   }
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Awaiting execution
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Success Rate
-                </CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">94.2%</div>
-                <p className="text-xs text-muted-foreground">
-                  Contract execution rate
                 </p>
               </CardContent>
             </Card>
@@ -514,12 +770,12 @@ export default function ContractManagementPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="pending_signature">
-                  Pending Signature
+                <SelectItem value="Active">Active</SelectItem>
+                <SelectItem value="Pending">Pending</SelectItem>
+                <SelectItem value="Expired">Expired</SelectItem>
+                <SelectItem value="approval_required">
+                  Approval Required
                 </SelectItem>
-                <SelectItem value="expired">Expired</SelectItem>
-                <SelectItem value="draft">Draft</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -529,251 +785,375 @@ export default function ContractManagementPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Contract ID</TableHead>
+                  {/* <TableHead>Contract ID</TableHead> */}
                   <TableHead>Client</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Value</TableHead>
-                  <TableHead>Risk Level</TableHead>
-                  <TableHead>Utilization</TableHead>
                   <TableHead>Actions</TableHead>
+                  <TableHead>Update Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredContracts.map((contract) => (
-                  <TableRow key={contract.id}>
-                    <TableCell className="font-medium">{contract.id}</TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{contract.client}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {contract.clientEmail}
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center">
+                      Loading...
+                    </TableCell>
+                  </TableRow>
+                ) : filteredContracts.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center">
+                      No contracts found
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredContracts.map((contract) => (
+                    <TableRow key={contract._id}>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">
+                            {contract.company_id.legal_company_name}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {contract.contract_title}
+                          </div>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>{contract.type}</TableCell>
-                    <TableCell>
-                      <Badge className={getStatusBadge(contract.status)}>
-                        {contract.status.replace("_", " ")}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>${contract.value.toLocaleString()}</TableCell>
-                    <TableCell>
-                      <Badge className={getRiskBadge(contract.riskLevel)}>
-                        {contract.riskLevel}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <Progress
-                          value={contract.utilization}
-                          className="w-16"
-                        />
-                        <span className="text-sm">{contract.utilization}%</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setSelectedContract(contract)}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                            <DialogHeader>
-                              <DialogTitle>
-                                {selectedContract?.title}
-                              </DialogTitle>
-                              <DialogDescription>
-                                Contract ID: {selectedContract?.id}
-                              </DialogDescription>
-                            </DialogHeader>
-                            {selectedContract && (
-                              <div className="space-y-6">
-                                {/* Contract Overview */}
-                                <div className="grid grid-cols-2 gap-6">
+                      </TableCell>
+                      <TableCell>Contract</TableCell>
+                      <TableCell>
+                        <Badge
+                          className={getStatusBadge(
+                            contract?.is_expired ? "Expired" : contract.status
+                          )}
+                        >
+                          {contract?.is_expired ? "Expired" : contract.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        ${Number(contract.value || 0).toLocaleString()}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-0">
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setSelectedContract(contract)}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                              <DialogHeader>
+                                <DialogTitle>
+                                  {selectedContract?.contract_title}
+                                </DialogTitle>
+                                <DialogDescription>
+                                  Contract ID: {selectedContract?._id}
+                                </DialogDescription>
+                              </DialogHeader>
+                              {selectedContract && (
+                                <div className="space-y-6">
+                                  <div className="grid grid-cols-2 gap-6">
+                                    <div className="space-y-4">
+                                      <h4 className="font-semibold">
+                                        Client Information
+                                      </h4>
+                                      <div className="space-y-2 text-sm">
+                                        <p>
+                                          <strong>Client:</strong>{" "}
+                                          {
+                                            selectedContract.company_id
+                                              .legal_company_name
+                                          }
+                                        </p>
+
+                                        <p>
+                                          <strong>Type:</strong> Contract
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <div className="space-y-4">
+                                      <h4 className="font-semibold">
+                                        Contract Details
+                                      </h4>
+                                      <div className="space-y-2 text-sm">
+                                        <p>
+                                          <strong>Value:</strong> $
+                                          {Number(
+                                            selectedContract.value || 0
+                                          ).toLocaleString()}
+                                        </p>
+                                        <p>
+                                          <strong>Start Date:</strong>{" "}
+                                          {new Date(
+                                            selectedContract.start_date
+                                          ).toLocaleDateString()}
+                                        </p>
+                                        <p>
+                                          <strong>End Date:</strong>{" "}
+                                          {new Date(
+                                            selectedContract.end_date
+                                          ).toLocaleDateString()}
+                                        </p>
+                                        <p>
+                                          <strong>Description:</strong>{" "}
+                                          {selectedContract.contract_description ||
+                                            "N/A"}
+                                        </p>
+                                        <p>
+                                          <strong>Status:</strong>{" "}
+                                          {selectedContract.is_expired ? (
+                                            <Badge
+                                              className={getStatusBadge(
+                                                "Expired"
+                                              )}
+                                            >
+                                              Expired
+                                            </Badge>
+                                          ) : (
+                                            <Badge
+                                              className={getStatusBadge(
+                                                selectedContract.status
+                                              )}
+                                            >
+                                              {selectedContract.status}
+                                            </Badge>
+                                          )}
+                                        </p>
+                                        {selectedContract.status_description && (
+                                          <p>
+                                            <strong>Status Description:</strong>{" "}
+                                            {
+                                              selectedContract.status_description
+                                            }
+                                          </p>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+
                                   <div className="space-y-4">
-                                    <h4 className="font-semibold">
-                                      Client Information
-                                    </h4>
-                                    <div className="space-y-2 text-sm">
-                                      <p>
-                                        <strong>Client:</strong>{" "}
-                                        {selectedContract.client}
-                                      </p>
-                                      <p>
-                                        <strong>Email:</strong>{" "}
-                                        {selectedContract.clientEmail}
-                                      </p>
-                                      <p>
-                                        <strong>Type:</strong>{" "}
-                                        {selectedContract.type}
-                                      </p>
-                                      <p>
-                                        <strong>Status:</strong>{" "}
-                                        <Badge
-                                          className={getStatusBadge(
+                                    <h4 className="font-semibold">Documents</h4>
+                                    <div className="space-y-2">
+                                      <div className="flex items-center justify-between p-3 border rounded-lg">
+                                        <div className="flex items-center gap-3">
+                                          {getDocumentStatusIcon(
                                             selectedContract.status
                                           )}
-                                        >
-                                          {selectedContract.status.replace(
-                                            "_",
-                                            " "
-                                          )}
-                                        </Badge>
-                                      </p>
-                                    </div>
-                                  </div>
-                                  <div className="space-y-4">
-                                    <h4 className="font-semibold">
-                                      Contract Details
-                                    </h4>
-                                    <div className="space-y-2 text-sm">
-                                      <p>
-                                        <strong>Value:</strong> $
-                                        {selectedContract.value.toLocaleString()}
-                                      </p>
-                                      <p>
-                                        <strong>Start Date:</strong>{" "}
-                                        {selectedContract.startDate}
-                                      </p>
-                                      <p>
-                                        <strong>End Date:</strong>{" "}
-                                        {selectedContract.endDate}
-                                      </p>
-                                      <p>
-                                        <strong>Risk Level:</strong>{" "}
-                                        <Badge
-                                          className={getRiskBadge(
-                                            selectedContract.riskLevel
-                                          )}
-                                        >
-                                          {selectedContract.riskLevel}
-                                        </Badge>
-                                      </p>
-                                    </div>
-                                  </div>
-                                </div>
-
-                                {/* Contract Terms */}
-                                <div className="space-y-4">
-                                  <h4 className="font-semibold">
-                                    Contract Terms
-                                  </h4>
-                                  <div className="grid grid-cols-3 gap-4">
-                                    <div className="p-4 border rounded-lg">
-                                      <p className="font-medium">
-                                        Advance Rate
-                                      </p>
-                                      <p className="text-2xl font-bold text-blue-600">
-                                        {selectedContract.terms.advanceRate}%
-                                      </p>
-                                    </div>
-                                    <div className="p-4 border rounded-lg">
-                                      <p className="font-medium">Factor Fee</p>
-                                      <p className="text-2xl font-bold text-green-600">
-                                        {selectedContract.terms.factorFee}%
-                                      </p>
-                                    </div>
-                                    <div className="p-4 border rounded-lg">
-                                      <p className="font-medium">
-                                        Credit Limit
-                                      </p>
-                                      <p className="text-2xl font-bold text-purple-600">
-                                        $
-                                        {selectedContract.terms.creditLimit.toLocaleString()}
-                                      </p>
-                                    </div>
-                                  </div>
-                                </div>
-
-                                {/* Documents */}
-                                <div className="space-y-4">
-                                  <h4 className="font-semibold">Documents</h4>
-                                  <div className="space-y-2">
-                                    {selectedContract.documents.map(
-                                      (doc: any, index: number) => (
-                                        <div
-                                          key={index}
-                                          className="flex items-center justify-between p-3 border rounded-lg"
-                                        >
-                                          <div className="flex items-center gap-3">
-                                            {getDocumentStatusIcon(doc.status)}
-                                            <div>
-                                              <p className="font-medium">
-                                                {doc.name}
-                                              </p>
-                                              <p className="text-sm text-muted-foreground">
-                                                {doc.status} • {doc.uploadDate}
-                                              </p>
-                                            </div>
+                                          <div>
+                                            <p className="font-medium">
+                                              Seller Contract Document
+                                            </p>
+                                            <p className="text-sm text-muted-foreground">
+                                              {
+                                                selectedContract.seller_contract_document
+                                              }
+                                            </p>
                                           </div>
-                                          <div className="flex items-center gap-2">
-                                            <Button variant="outline" size="sm">
-                                              <Download className="h-4 w-4" />
-                                            </Button>
-                                            {doc.status ===
-                                              "pending_signature" && (
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                          {selectedContract.seller_contract_document ? (
+                                            <>
                                               <Button
+                                                variant="outline"
                                                 size="sm"
                                                 onClick={() =>
-                                                  handleSendForSignature(
-                                                    selectedContract.id
+                                                  handleDownloadDocument(
+                                                    selectedContract.seller_contract_document,
+                                                    `seller_contract${selectedContract.seller_contract_document.substring(
+                                                      selectedContract.seller_contract_document.lastIndexOf(
+                                                        "."
+                                                      )
+                                                    )}`
                                                   )
                                                 }
                                               >
-                                                <Send className="h-4 w-4 mr-1" />
-                                                Send
+                                                <Download className="h-4 w-4 mr-1" />
                                               </Button>
-                                            )}
+                                              <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() =>
+                                                  handleViewDocument(
+                                                    selectedContract.seller_contract_document
+                                                  )
+                                                }
+                                              >
+                                                <Eye className="h-4 w-4 mr-1" />
+                                              </Button>
+                                            </>
+                                          ) : (
+                                            <span className="text-sm text-muted-foreground">
+                                              Document not available
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center justify-between p-3 border rounded-lg">
+                                        <div className="flex items-center gap-3">
+                                          {getDocumentStatusIcon(
+                                            selectedContract.status
+                                          )}
+                                          <div>
+                                            <p className="font-medium">
+                                              Admin Signed Contract
+                                            </p>
+                                            <p className="text-sm text-muted-foreground">
+                                              {selectedContract.admin_signed_contract ||
+                                                "No document uploaded"}
+                                            </p>
                                           </div>
                                         </div>
-                                      )
-                                    )}
+                                        <div className="flex items-center gap-2">
+                                          {selectedContract.admin_signed_contract ? (
+                                            <>
+                                              <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() =>
+                                                  handleDownloadDocument(
+                                                    selectedContract.admin_signed_contract,
+                                                    `admin_signed_contract${selectedContract.admin_signed_contract.substring(
+                                                      selectedContract.admin_signed_contract.lastIndexOf(
+                                                        "."
+                                                      )
+                                                    )}`
+                                                  )
+                                                }
+                                              >
+                                                <Download className="h-4 w-4 mr-1" />
+                                              </Button>
+                                              <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() =>
+                                                  handleViewDocument(
+                                                    selectedContract.admin_signed_contract
+                                                  )
+                                                }
+                                              >
+                                                <Eye className="h-4 w-4 mr-1" />
+                                              </Button>
+                                            </>
+                                          ) : (
+                                            <span className="text-sm text-muted-foreground">
+                                              Document not available
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="space-y-4">
+                                    <h4 className="font-semibold">
+                                      Status Description
+                                    </h4>
+                                    <p className="text-sm text-muted-foreground">
+                                      {selectedContract.contract_description ||
+                                        "No status description available"}
+                                    </p>
                                   </div>
                                 </div>
-
-                                {/* Notes */}
-                                <div className="space-y-4">
-                                  <h4 className="font-semibold">Notes</h4>
-                                  <p className="text-sm text-muted-foreground">
-                                    {selectedContract.notes}
-                                  </p>
-                                </div>
-                              </div>
-                            )}
-                          </DialogContent>
-                        </Dialog>
-                        <Button variant="ghost" size="sm">
+                              )}
+                            </DialogContent>
+                          </Dialog>
+                          {/* <Button variant="ghost" size="sm">
                           <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm">
+                          </Button> */}
+                          {/* <Button variant="ghost" size="sm">
                           <Download className="h-4 w-4" />
-                        </Button>
-                        {contract.status === "pending_signature" && (
-                          <Button
-                            size="sm"
-                            onClick={() => handleSendForSignature(contract.id)}
-                          >
-                            <Send className="h-4 w-4" />
-                          </Button>
+                          </Button> */}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {!contract.is_expired && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  handleStatusAction(contract._id, "Active")
+                                }
+                                disabled={isStatusUpdating}
+                              >
+                                <CheckCircle className="h-4 w-4 mr-2" />
+                                {isStatusUpdating
+                                  ? "Updating..."
+                                  : "Mark as Active"}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  handleStatusAction(contract._id, "Rejected")
+                                }
+                                className="text-red-600"
+                                disabled={isStatusUpdating}
+                              >
+                                <AlertTriangle className="h-4 w-4 mr-2" />
+                                {isStatusUpdating
+                                  ? "Updating..."
+                                  : "Mark as Rejected"}
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                        {contract.is_expired && (
+                          <span className="text-xs text-muted-foreground">
+                            Cannot update expired contract
+                          </span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between px-4 py-4 border-t">
+                <div className="text-sm text-muted-foreground">
+                  Showing {(currentPage - 1) * 10 + 1} to{" "}
+                  {Math.min(currentPage * 10, totalRecords)} of {totalRecords}{" "}
+                  entries
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.max(1, prev - 1))
+                    }
+                    disabled={currentPage === 1 || isLoading}
+                  >
+                    Previous
+                  </Button>
+                  <div className="text-sm">
+                    Page {currentPage} of {totalPages}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                    }
+                    disabled={currentPage === totalPages || isLoading}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            )}
           </Card>
         </TabsContent>
 
         {/* Templates Tab */}
-        <TabsContent value="templates" className="space-y-4">
+        {/* <TabsContent value="templates" className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-medium">Contract Templates</h3>
             <Button onClick={() => setIsNewTemplateOpen(true)}>
@@ -942,12 +1322,10 @@ export default function ContractManagementPage() {
               </Card>
             ))}
           </div>
-        </TabsContent>
+        </TabsContent> */}
 
-        {/* Settings Tab */}
-        <TabsContent value="settings" className="space-y-6">
+        {/* <TabsContent value="settings" className="space-y-6">
           <div className="grid gap-6">
-            {/* DocuSign Integration */}
             <Card>
               <CardHeader>
                 <CardTitle>DocuSign Integration</CardTitle>
@@ -993,7 +1371,6 @@ export default function ContractManagementPage() {
               </CardContent>
             </Card>
 
-            {/* Contract Settings */}
             <Card>
               <CardHeader>
                 <CardTitle>Contract Settings</CardTitle>
@@ -1062,7 +1439,6 @@ export default function ContractManagementPage() {
               </CardContent>
             </Card>
 
-            {/* Notification Settings */}
             <Card>
               <CardHeader>
                 <CardTitle>Notification Settings</CardTitle>
@@ -1115,7 +1491,6 @@ export default function ContractManagementPage() {
               </CardContent>
             </Card>
 
-            {/* Document Settings */}
             <Card>
               <CardHeader>
                 <CardTitle>Document Management</CardTitle>
@@ -1184,49 +1559,91 @@ export default function ContractManagementPage() {
               </CardContent>
             </Card>
           </div>
-        </TabsContent>
+        </TabsContent> */}
       </Tabs>
 
-      {/* New Contract Dialog */}
       <Dialog open={isNewContractOpen} onOpenChange={setIsNewContractOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle>Create New Contract</DialogTitle>
             <DialogDescription>
               Enter the details for the new contract
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+          <div className="overflow-y-auto flex-grow pr-2 -mr-2">
+            <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="client-name">Client Name</Label>
-                <Input
-                  id="client-name"
-                  value={contractFormData.clientName || ""}
-                  onChange={(e) =>
+                <Label htmlFor="client">Select Client</Label>
+                <Select
+                  value={contractFormData.clientId || ""}
+                  onValueChange={(value) =>
                     setContractFormData({
                       ...contractFormData,
-                      clientName: e.target.value,
+                      clientId: value,
                     })
                   }
-                />
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue
+                      placeholder={
+                        clientsLoading && clients.length === 0
+                          ? "Fetching clients..."
+                          : clientsError && clients.length === 0
+                          ? "Error loading clients"
+                          : "Select a client"
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent
+                    className="w-full z-50 max-h-[300px]"
+                    position="popper"
+                    side="bottom"
+                    align="start"
+                    onScroll={(e) => {
+                      const target = e.target as HTMLDivElement;
+                      if (
+                        !clientsLoading &&
+                        hasMoreClients &&
+                        target.scrollTop + target.clientHeight >=
+                          target.scrollHeight - 50
+                      ) {
+                        fetchClients(clientsPage + 1, true);
+                      }
+                    }}
+                  >
+                    {clientsError && clients.length === 0 ? (
+                      <div className="p-2 text-center">
+                        <p className="text-sm text-red-500 mb-2">
+                          Failed to load clients
+                        </p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => fetchClients(1, false)}
+                        >
+                          Retry
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
+                        {clients.map((client) => (
+                          <SelectItem key={client._id} value={client._id}>
+                            {client.legal_company_name}
+                          </SelectItem>
+                        ))}
+                        {clientsLoading && (
+                          <div className="p-2 text-center">
+                            <span className="text-sm text-muted-foreground">
+                              Loading...
+                            </span>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </SelectContent>
+                </Select>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="client-email">Client Email</Label>
-                <Input
-                  id="client-email"
-                  type="email"
-                  value={contractFormData.clientEmail || ""}
-                  onChange={(e) =>
-                    setContractFormData({
-                      ...contractFormData,
-                      clientEmail: e.target.value,
-                    })
-                  }
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
+
               <div className="space-y-2">
                 <Label htmlFor="contract-type">Contract Type</Label>
                 <Select
@@ -1238,102 +1655,105 @@ export default function ContractManagementPage() {
                     })
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select contract type" />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="trade-finance">Trade Finance</SelectItem>
-                    <SelectItem value="invoice-factoring">
-                      Invoice Factoring
-                    </SelectItem>
-                    <SelectItem value="supply-chain">
-                      Supply Chain Finance
-                    </SelectItem>
-                    <SelectItem value="invoice-factoring">
-                      Invoice Factoring
-                    </SelectItem>
-                    <SelectItem value="supply-chain">
-                      Supply Chain Finance
-                    </SelectItem>
+                  <SelectContent
+                    className="w-full z-50"
+                    position="popper"
+                    side="bottom"
+                    align="start"
+                  >
+                    <SelectItem value="standard">Standard Contract</SelectItem>
+                    <SelectItem value="special">Special Contract</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="start-date">Contract Start Date</Label>
+                  <Input
+                    id="start-date"
+                    type="date"
+                    value={contractFormData.startDate || ""}
+                    onChange={(e) =>
+                      setContractFormData({
+                        ...contractFormData,
+                        startDate: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="end-date">Contract End Date</Label>
+                  <Input
+                    id="end-date"
+                    type="date"
+                    value={contractFormData.endDate || ""}
+                    onChange={(e) =>
+                      setContractFormData({
+                        ...contractFormData,
+                        endDate: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="value">Contract Amount ($)</Label>
+                  <Input
+                    id="value"
+                    type="number"
+                    placeholder="Enter contract amount"
+                    value={contractFormData.value || ""}
+                    onChange={(e) =>
+                      setContractFormData({
+                        ...contractFormData,
+                        value: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+              </div>
+
               <div className="space-y-2">
-                <Label htmlFor="contract-value">Contract Value ($)</Label>
-                <Input
-                  id="contract-value"
-                  type="number"
-                  value={contractFormData.contractValue || ""}
+                <Label htmlFor="description">Contract Description</Label>
+                <Textarea
+                  id="description"
+                  value={contractFormData.description || ""}
                   onChange={(e) =>
                     setContractFormData({
                       ...contractFormData,
-                      contractValue: e.target.value,
+                      description: e.target.value,
                     })
                   }
+                  placeholder="Enter contract description..."
                 />
               </div>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
+
               <div className="space-y-2">
-                <Label htmlFor="advance-rate">Advance Rate (%)</Label>
+                <Label htmlFor="contract-image">Contract Document</Label>
                 <Input
-                  id="advance-rate"
-                  type="number"
-                  value={contractFormData.advanceRate || ""}
+                  id="contract-image"
+                  type="file"
+                  accept="image/*,.pdf"
                   onChange={(e) =>
                     setContractFormData({
                       ...contractFormData,
-                      advanceRate: e.target.value,
+                      contractImage: e.target.files?.[0] || null,
                     })
                   }
                 />
+                <p className="text-sm text-muted-foreground">
+                  Upload contract image or PDF (Max size: 5MB)
+                </p>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="factor-fee">Factor Fee (%)</Label>
-                <Input
-                  id="factor-fee"
-                  type="number"
-                  step="0.1"
-                  value={contractFormData.factorFee || ""}
-                  onChange={(e) =>
-                    setContractFormData({
-                      ...contractFormData,
-                      factorFee: e.target.value,
-                    })
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="term-length">Term Length (days)</Label>
-                <Input
-                  id="term-length"
-                  type="number"
-                  value={contractFormData.termLength || ""}
-                  onChange={(e) =>
-                    setContractFormData({
-                      ...contractFormData,
-                      termLength: e.target.value,
-                    })
-                  }
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="notes">Notes</Label>
-              <Textarea
-                id="notes"
-                value={contractFormData.notes || ""}
-                onChange={(e) =>
-                  setContractFormData({
-                    ...contractFormData,
-                    notes: e.target.value,
-                  })
-                }
-                placeholder="Additional notes or special terms..."
-              />
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex-shrink-0 mt-4">
             <Button
               variant="outline"
               onClick={() => setIsNewContractOpen(false)}
@@ -1345,7 +1765,65 @@ export default function ContractManagementPage() {
         </DialogContent>
       </Dialog>
 
-      {/* New Template Dialog */}
+      {/* Rejection Reason Dialog */}
+      <Dialog
+        open={isRejectionDialogOpen}
+        onOpenChange={setIsRejectionDialogOpen}
+      >
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Enter Rejection Reason</DialogTitle>
+            <DialogDescription>
+              Please provide a reason for rejecting this contract.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="rejection-reason">Reason</Label>
+              <Textarea
+                id="rejection-reason"
+                placeholder="Enter rejection reason..."
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                className="min-h-[100px]"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsRejectionDialogOpen(false);
+                setRejectionReason("");
+                setSelectedContractForRejection(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (!rejectionReason.trim()) {
+                  toast({
+                    title: "Error",
+                    description: "Please enter a rejection reason",
+                    variant: "error",
+                  });
+                  return;
+                }
+                handleUpdateStatus(
+                  selectedContractForRejection,
+                  "Rejected",
+                  rejectionReason.trim()
+                );
+              }}
+              disabled={isStatusUpdating}
+            >
+              {isStatusUpdating ? "Updating..." : "Submit"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={isNewTemplateOpen} onOpenChange={setIsNewTemplateOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
