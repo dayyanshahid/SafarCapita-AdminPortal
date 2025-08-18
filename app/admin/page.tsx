@@ -169,14 +169,14 @@ export default function AdminDashboard() {
 
   const headerActions = (
     <div className="flex gap-3">
-      <Button variant="outline" className="gap-2 bg-transparent">
+      {/* <Button variant="outline" className="gap-2 bg-transparent">
         <Download className="h-4 w-4" />
         Export Report
       </Button>
       <Button variant="outline" className="gap-2 bg-transparent">
         <Eye className="h-4 w-4" />
         System Logs
-      </Button>
+      </Button> */}
     </div>
   );
 

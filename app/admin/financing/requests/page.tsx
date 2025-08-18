@@ -749,7 +749,7 @@ export default function FinancingRequestsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-2 bg-transparent">
+          {/* <Button variant="outline" size="sm" className="gap-2 bg-transparent">
             <Bell className="h-4 w-4" />
             Alerts
             {stats.pending > 0 && (
@@ -757,7 +757,7 @@ export default function FinancingRequestsPage() {
                 {stats.pending}
               </Badge>
             )}
-          </Button>
+          </Button> */}
           {/* <Button variant="outline" size="sm" className="gap-2 bg-transparent">
             <Download className="h-4 w-4" />
             Export
@@ -766,7 +766,7 @@ export default function FinancingRequestsPage() {
             <Settings className="h-4 w-4" />
             Settings
           </Button> */}
-          <DropdownMenu>
+          {/* <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">
                 <MoreHorizontal className="h-4 w-4" />
@@ -786,7 +786,7 @@ export default function FinancingRequestsPage() {
                 Advanced Filters
               </DropdownMenuItem>
             </DropdownMenuContent>
-          </DropdownMenu>
+          </DropdownMenu> */}
         </div>
       </div>
 

@@ -47,20 +47,20 @@ const data = {
       url: "/admin",
       icon: Home,
     },
-    {
-      title: "Admin Management",
-      icon: Shield,
-      items: [
-        {
-          title: "Roles & Permissions",
-          url: "/admin/roles",
-        },
-        {
-          title: "User Management",
-          url: "/admin/users",
-        },
-      ],
-    },
+    // {
+    //   title: "Admin Management",
+    //   icon: Shield,
+    //   items: [
+    //     {
+    //       title: "Roles & Permissions",
+    //       url: "/admin/roles",
+    //     },
+    //     {
+    //       title: "User Management",
+    //       url: "/admin/users",
+    //     },
+    //   ],
+    // },
     {
       title: "Seller Management",
       url: "/admin/sellers",
@@ -115,7 +115,7 @@ export function AdminSidebar({
                   className="group/collapsible"
                 >
                   <SidebarMenuItem>
-                    {item.items ? (
+                    {/* {item.items ? (
                       <>
                         <CollapsibleTrigger asChild>
                           <SidebarMenuButton
@@ -166,27 +166,25 @@ export function AdminSidebar({
                           </SidebarMenuSub>
                         </CollapsibleContent>
                       </>
-                    ) : (
-                      <SidebarMenuButton
-                        tooltip={item.title}
-                        asChild
-                        className={cn(
-                          isActive(item.url) &&
-                            "bg-red-50 text-red-900 hover:bg-red-100"
+                    ) : ( */}
+                    <SidebarMenuButton
+                      tooltip={item.title}
+                      asChild
+                      className={cn(
+                        isActive(item.url) &&
+                          "bg-red-50 text-red-900 hover:bg-red-100"
+                      )}
+                    >
+                      <a href={item.url}>
+                        {item.icon && (
+                          <item.icon
+                            className={cn(isActive(item.url) && "text-red-600")}
+                          />
                         )}
-                      >
-                        <a href={item.url}>
-                          {item.icon && (
-                            <item.icon
-                              className={cn(
-                                isActive(item.url) && "text-red-600"
-                              )}
-                            />
-                          )}
-                          <span>{item.title}</span>
-                        </a>
-                      </SidebarMenuButton>
-                    )}
+                        <span>{item.title}</span>
+                      </a>
+                    </SidebarMenuButton>
+                    {/* )} */}
                   </SidebarMenuItem>
                 </Collapsible>
               ))}
