@@ -529,6 +529,11 @@ interface ApiResponse {
       major_client_buyers: string;
       cash_flow_cyle: string;
       no_of_employees: string;
+      bank_statements?: string;
+      business_registration_certificate?: string;
+      financial_statements?: string;
+      tax_registration_documents?: string;
+      verification_image?: string;
       employee_id: {
         _id: string;
         auth_id: string;
@@ -562,6 +567,23 @@ interface ApiResponse {
       createdAt: string;
       updatedAt: string;
       __v: number;
+      contracts: Array<{
+        _id: string;
+        company_id: string;
+        contract_title: string;
+        contract_description: string;
+        seller_contract_document: string;
+        admin_signed_contract: string;
+        status: string;
+        status_description: string;
+        value: string;
+        start_date: string;
+        end_date: string;
+        action_type: number;
+        created_at: string;
+        updated_at: string;
+        __v: number;
+      }>;
     };
     invoices: {
       data: Array<{
@@ -662,6 +684,8 @@ interface ApiResponse {
       annual_revenue: number;
       total_transaction_volume: number;
       average_transaction_size: number;
+      total_contracts: number;
+      active_contracts: number;
     };
   };
   misc_data: null | any;
@@ -1080,21 +1104,19 @@ export default function SellerApplicationDetailPage({ params }: PageProps) {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center p-3 bg-blue-50 rounded-lg">
-                    <div className="text-2xl font-bold text-blue-600">-</div>
+                    <div className="text-2xl font-bold text-blue-600">
+                      {apiData?.result?.stats?.total_contracts || 0}
+                    </div>
                     <div className="text-sm text-blue-700">Total Contracts</div>
                   </div>
                   <div className="text-center p-3 bg-green-50 rounded-lg">
-                    <div className="text-2xl font-bold text-green-600">-</div>
+                    <div className="text-2xl font-bold text-green-600">
+                      {apiData?.result?.stats?.active_contracts || 0}
+                    </div>
                     <div className="text-sm text-green-700">
                       Active Contracts
                     </div>
                   </div>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium">
-                    Total Contract Value
-                  </Label>
-                  <p className="text-lg font-semibold">-</p>
                 </div>
               </CardContent>
             </Card>
@@ -1127,14 +1149,14 @@ export default function SellerApplicationDetailPage({ params }: PageProps) {
                     <div className="text-sm text-green-700">Approval Rate</div>
                   </div>
                 </div>
-                <div>
+                {/* <div>
                   <Label className="text-sm font-medium">
                     Total Financed Amount
                   </Label>
                   <p className="text-lg font-semibold">
                     {apiData?.result?.invoices?.total_funded || "0"}
                   </p>
-                </div>
+                </div> */}
               </CardContent>
             </Card>
           </div>
@@ -1629,32 +1651,37 @@ export default function SellerApplicationDetailPage({ params }: PageProps) {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4 md:grid-cols-4">
+              <div className="grid gap-4 md:grid-cols-2">
                 <div className="text-center p-4 bg-blue-50 rounded-lg">
-                  <div className="text-2xl font-bold text-blue-600">-</div>
+                  <div className="text-2xl font-bold text-blue-600">
+                    {apiData?.result?.stats?.total_contracts || 0}
+                  </div>
                   <div className="text-sm text-blue-700">Total Contracts</div>
                 </div>
                 <div className="text-center p-4 bg-green-50 rounded-lg">
-                  <div className="text-2xl font-bold text-green-600">-</div>
+                  <div className="text-2xl font-bold text-green-600">
+                    {" "}
+                    {apiData?.result?.stats?.active_contracts || 0}
+                  </div>
                   <div className="text-sm text-green-700">Active Contracts</div>
                 </div>
-                <div className="text-center p-4 bg-purple-50 rounded-lg">
+                {/* <div className="text-center p-4 bg-purple-50 rounded-lg">
                   <div className="text-2xl font-bold text-purple-600">-</div>
                   <div className="text-sm text-purple-700">Total Value</div>
                 </div>
                 <div className="text-center p-4 bg-orange-50 rounded-lg">
                   <div className="text-2xl font-bold text-orange-600">-</div>
                   <div className="text-sm text-orange-700">Avg Utilization</div>
-                </div>
+                </div> */}
               </div>
             </CardContent>
           </Card>
 
           {/* Contract Details */}
           <div className="grid gap-6">
-            {mockApplication.contracts.map((contract) => (
+            {apiData?.result?.company?.contracts?.map((contract) => (
               <Card
-                key={contract.id}
+                key={contract._id}
                 className="hover:shadow-md transition-shadow duration-200"
               >
                 <CardHeader>
@@ -1662,145 +1689,54 @@ export default function SellerApplicationDetailPage({ params }: PageProps) {
                     <div>
                       <CardTitle className="flex items-center gap-2">
                         <FileText className="h-5 w-5" />
-                        {contract.title}
+                        {contract.contract_title}
                       </CardTitle>
                       <CardDescription>
-                        {contract.id} • {contract.type} • {contract.buyer}
+                        {contract.contract_description}
                       </CardDescription>
                     </div>
                     <div className="flex items-center gap-2">
                       {getStatusBadge(contract.status)}
-                      {getRiskBadge(contract.riskLevel)}
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid gap-4 md:grid-cols-3">
+                  <div className="grid gap-4 md:grid-cols-2">
                     <div>
                       <Label className="text-sm font-medium">
-                        Contract Value
-                      </Label>
-                      <p className="text-lg font-semibold">
-                        {formatCurrency(
-                          contract.contractValue,
-                          contract.currency
-                        )}
-                      </p>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium">
-                        Contract Period
+                        Status Description
                       </Label>
                       <p className="text-sm text-muted-foreground">
-                        {formatDate(contract.startDate)} -{" "}
-                        {formatDate(contract.endDate)}
-                      </p>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium">
-                        Payment Terms
-                      </Label>
-                      <p className="text-sm text-muted-foreground">
-                        {contract.paymentTerms}
+                        {contract.status_description || "-"}
                       </p>
                     </div>
                   </div>
 
-                  <div>
-                    <Label className="text-sm font-medium">Description</Label>
-                    <p className="text-sm text-muted-foreground">
-                      {contract.description}
-                    </p>
-                  </div>
-
-                  {/* <div>
-                    <Label className="text-sm font-medium">
-                      Contract Utilization
-                    </Label>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Progress
-                        value={contract.utilization}
-                        className="flex-1"
-                      />
-                      <span className="text-sm font-medium">
-                        {contract.utilization}%
-                      </span>
-                    </div>
-                  </div> */}
-
-                  {/* {contract.performanceMetrics.onTimeDelivery && (
-                    <div>
-                      <Label className="text-sm font-medium">
-                        Performance Metrics
-                      </Label>
-                      <div className="grid gap-2 md:grid-cols-3 mt-2">
-                        <div className="text-center p-2 bg-green-50 rounded">
-                          <div className="text-lg font-bold text-green-600">
-                            {contract.performanceMetrics.onTimeDelivery}%
-                          </div>
-                          <div className="text-xs text-green-700">
-                            On-Time Delivery
-                          </div>
-                        </div>
-                        <div className="text-center p-2 bg-blue-50 rounded">
-                          <div className="text-lg font-bold text-blue-600">
-                            {contract.performanceMetrics.qualityScore}%
-                          </div>
-                          <div className="text-xs text-blue-700">
-                            Quality Score
-                          </div>
-                        </div>
-                        <div className="text-center p-2 bg-purple-50 rounded">
-                          <div className="text-lg font-bold text-purple-600">
-                            {contract.performanceMetrics.customerSatisfaction}%
-                          </div>
-                          <div className="text-xs text-purple-700">
-                            Customer Satisfaction
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )} */}
-
-                  <div>
-                    <Label className="text-sm font-medium">Key Terms</Label>
-                    <div className="flex flex-wrap gap-2 mt-1">
-                      {contract.keyTerms.map((term, index) => (
-                        <Badge
-                          key={index}
-                          variant="outline"
-                          className="text-xs"
+                  <div className="flex items-center justify-end gap-2">
+                    {contract.seller_contract_document && (
+                      <Button variant="outline" size="sm" asChild>
+                        <a
+                          href={`${BASE_URL}${contract.seller_contract_document}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
                         >
-                          {term}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-2">
-                    <div className="text-sm text-muted-foreground">
-                      {contract.lastPayment && (
-                        <span>
-                          Last Payment: {formatDate(contract.lastPayment)}
-                        </span>
-                      )}
-                      {contract.nextPayment && (
-                        <span>
-                          {" "}
-                          • Next Payment: {formatDate(contract.nextPayment)}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm">
-                        <Eye className="h-4 w-4 mr-2" />
-                        View Details
+                          <Download className="h-4 w-4 mr-2" />
+                          Seller Contract
+                        </a>
                       </Button>
-                      <Button variant="outline" size="sm">
-                        <Download className="h-4 w-4 mr-2" />
-                        Download
+                    )}
+                    {contract.admin_signed_contract && (
+                      <Button variant="outline" size="sm" asChild>
+                        <a
+                          href={`${BASE_URL}/${contract.admin_signed_contract}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          Admin Contract
+                        </a>
                       </Button>
-                    </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -2078,18 +2014,30 @@ export default function SellerApplicationDetailPage({ params }: PageProps) {
                         </Badge>
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        Not uploaded
+                        {apiData?.result?.company?.bank_statements
+                          ? apiData.result.company.bank_statements
+                              .split("/")
+                              .pop()
+                          : "Not uploaded"}
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    {getStatusBadge(
-                      apiData?.result?.company?.documents_status || "pending"
+                    {apiData?.result?.company?.bank_statements && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          window.open(
+                            `${BASE_URL}${apiData.result.company.bank_statements}`,
+                            "_blank"
+                          )
+                        }
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        View
+                      </Button>
                     )}
-                    <Button variant="outline" size="sm" disabled>
-                      <Eye className="h-4 w-4 mr-2" />
-                      View
-                    </Button>
                   </div>
                 </div>
 
@@ -2113,18 +2061,32 @@ export default function SellerApplicationDetailPage({ params }: PageProps) {
                         </Badge>
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        Not uploaded
+                        {apiData?.result?.company
+                          ?.business_registration_certificate
+                          ? apiData.result.company.business_registration_certificate
+                              .split("/")
+                              .pop()
+                          : "Not uploaded"}
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    {getStatusBadge(
-                      apiData?.result?.company?.documents_status || "pending"
+                    {apiData?.result?.company
+                      ?.business_registration_certificate && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          window.open(
+                            `${BASE_URL}${apiData.result.company.business_registration_certificate}`,
+                            "_blank"
+                          )
+                        }
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        View
+                      </Button>
                     )}
-                    <Button variant="outline" size="sm" disabled>
-                      <Eye className="h-4 w-4 mr-2" />
-                      View
-                    </Button>
                   </div>
                 </div>
 
@@ -2148,18 +2110,30 @@ export default function SellerApplicationDetailPage({ params }: PageProps) {
                         </Badge>
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        Not uploaded
+                        {apiData?.result?.company?.financial_statements
+                          ? apiData.result.company.financial_statements
+                              .split("/")
+                              .pop()
+                          : "Not uploaded"}
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    {getStatusBadge(
-                      apiData?.result?.company?.documents_status || "pending"
+                    {apiData?.result?.company?.financial_statements && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          window.open(
+                            `${BASE_URL}${apiData.result.company.financial_statements}`,
+                            "_blank"
+                          )
+                        }
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        View
+                      </Button>
                     )}
-                    <Button variant="outline" size="sm" disabled>
-                      <Eye className="h-4 w-4 mr-2" />
-                      View
-                    </Button>
                   </div>
                 </div>
 
@@ -2183,18 +2157,30 @@ export default function SellerApplicationDetailPage({ params }: PageProps) {
                         </Badge>
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        Not uploaded
+                        {apiData?.result?.company?.tax_registration_documents
+                          ? apiData.result.company.tax_registration_documents
+                              .split("/")
+                              .pop()
+                          : "Not uploaded"}
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    {getStatusBadge(
-                      apiData?.result?.company?.documents_status || "pending"
+                    {apiData?.result?.company?.tax_registration_documents && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          window.open(
+                            `${BASE_URL}${apiData.result.company.tax_registration_documents}`,
+                            "_blank"
+                          )
+                        }
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        View
+                      </Button>
                     )}
-                    <Button variant="outline" size="sm" disabled>
-                      <Eye className="h-4 w-4 mr-2" />
-                      View
-                    </Button>
                   </div>
                 </div>
 
@@ -2216,18 +2202,30 @@ export default function SellerApplicationDetailPage({ params }: PageProps) {
                         </Badge>
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        Not uploaded
+                        {apiData?.result?.company?.verification_image
+                          ? apiData.result.company.verification_image
+                              .split("/")
+                              .pop()
+                          : "Not uploaded"}
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    {getStatusBadge(
-                      apiData?.result?.company?.documents_status || "pending"
+                    {apiData?.result?.company?.verification_image && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          window.open(
+                            `${BASE_URL}${apiData.result.company.verification_image}`,
+                            "_blank"
+                          )
+                        }
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        View
+                      </Button>
                     )}
-                    <Button variant="outline" size="sm" disabled>
-                      <Eye className="h-4 w-4 mr-2" />
-                      View
-                    </Button>
                   </div>
                 </div>
               </div>

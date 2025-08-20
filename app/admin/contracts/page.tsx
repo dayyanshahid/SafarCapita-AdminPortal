@@ -511,8 +511,8 @@ export default function ContractManagementPage() {
       // Validate required fields
       if (
         !contractFormData.clientId ||
-        !contractFormData.contractType ||
-        !contractFormData.value
+        !contractFormData.contractType
+        // !contractFormData.value
       ) {
         toast({
           title: "Error",
@@ -527,13 +527,13 @@ export default function ContractManagementPage() {
       const formData = new FormData();
       formData.append("company_id", contractFormData.clientId);
       formData.append("contract_title", contractFormData.contractType);
-      formData.append(
-        "contract_description",
-        contractFormData.description || ""
-      );
-      formData.append("value", contractFormData.value);
-      formData.append("start_date", contractFormData.startDate);
-      formData.append("end_date", contractFormData.endDate);
+      // formData.append(
+      //   "contract_description",
+      //   contractFormData.description || ""
+      // );
+      // formData.append("value", contractFormData.value);
+      // formData.append("start_date", contractFormData.startDate);
+      // formData.append("end_date", contractFormData.endDate);
 
       if (contractFormData.contractImage) {
         formData.append(
@@ -1670,7 +1670,7 @@ export default function ContractManagementPage() {
                 </Select>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              {/* <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="start-date">Contract Start Date</Label>
                   <Input
@@ -1717,9 +1717,9 @@ export default function ContractManagementPage() {
                     }
                   />
                 </div>
-              </div>
+              </div> */}
 
-              <div className="space-y-2">
+              {/* <div className="space-y-2">
                 <Label htmlFor="description">Contract Description</Label>
                 <Textarea
                   id="description"
@@ -1732,7 +1732,7 @@ export default function ContractManagementPage() {
                   }
                   placeholder="Enter contract description..."
                 />
-              </div>
+              </div> */}
 
               <div className="space-y-2">
                 <Label htmlFor="contract-image">Contract Document</Label>
