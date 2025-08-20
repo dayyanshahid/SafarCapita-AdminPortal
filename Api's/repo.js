@@ -34,3 +34,6 @@ export const createAndUpdateContractApiCall =
 export const contractUpdateStatusApiCall =
   process.env.NEXT_PUBLIC_API_BASE_URL +
   "safar-capital/api/contract/update-status";
+export const getNotificationsApiCall =
+  process.env.NEXT_PUBLIC_API_BASE_URL +
+  "safar-capital/api/notifications/get-all";

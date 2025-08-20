@@ -35,6 +35,9 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const fcmToken = localStorage.getItem("fcm_token");
+    console.log("FCM Token before login:", fcmToken);
     setIsLoading(true);
     setError("");
 
@@ -42,7 +45,7 @@ export default function LoginPage() {
       const response = await makeRequest({
         url: LoginAdminApiCall,
         method: "POST",
-        data: { email, password },
+        data: { email, password, fcm_token: fcmToken },
       });
 
       const { data } = response;
