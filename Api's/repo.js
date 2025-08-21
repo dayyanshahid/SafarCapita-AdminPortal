@@ -45,3 +45,10 @@ export const getAllRolesApiCall =
   process.env.NEXT_PUBLIC_API_BASE_URL + "safar-capital/api/role/get-all";
 export const deleteRoleApiCall =
   process.env.NEXT_PUBLIC_API_BASE_URL + "safar-capital/api/role/delete";
+export const getAllAdminUsersApiCall =
+  process.env.NEXT_PUBLIC_API_BASE_URL +
+  "safar-capital/api/user/get-all-admins";
+export const addAdminUserApiCall =
+  process.env.NEXT_PUBLIC_API_BASE_URL + "safar-capital/api/employee/post";
+export const updateAdminUserApiCall =
+  process.env.NEXT_PUBLIC_API_BASE_URL + "safar-capital/api/employee/update";
