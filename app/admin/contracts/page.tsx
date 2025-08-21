@@ -695,7 +695,7 @@ export default function ContractManagementPage() {
         {/* Contracts Tab */}
         <TabsContent value="contracts" className="space-y-4">
           {/* Summary Cards */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
@@ -714,7 +714,7 @@ export default function ContractManagementPage() {
                 </p>
               </CardContent>
             </Card>
-            <Card>
+            {/* <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
                   Total Value
@@ -730,7 +730,7 @@ export default function ContractManagementPage() {
                 </div>
                 <p className="text-xs text-muted-foreground">Portfolio value</p>
               </CardContent>
-            </Card>
+            </Card> */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
@@ -789,7 +789,7 @@ export default function ContractManagementPage() {
                   <TableHead>Client</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Value</TableHead>
+                  {/* <TableHead>Value</TableHead> */}
                   <TableHead>Actions</TableHead>
                   <TableHead>Update Status</TableHead>
                 </TableRow>
@@ -830,9 +830,9 @@ export default function ContractManagementPage() {
                           {contract?.is_expired ? "Expired" : contract.status}
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        ${Number(contract.value || 0).toLocaleString()}
-                      </TableCell>
+                      {/* <TableCell>
+                          ${Number(contract.value || 0).toLocaleString()}
+                        </TableCell> */}
                       <TableCell>
                         <div className="flex items-center gap-0">
                           <Dialog>
@@ -880,7 +880,7 @@ export default function ContractManagementPage() {
                                         Contract Details
                                       </h4>
                                       <div className="space-y-2 text-sm">
-                                        <p>
+                                        {/* <p>
                                           <strong>Value:</strong> $
                                           {Number(
                                             selectedContract.value || 0
@@ -902,7 +902,7 @@ export default function ContractManagementPage() {
                                           <strong>Description:</strong>{" "}
                                           {selectedContract.contract_description ||
                                             "N/A"}
-                                        </p>
+                                        </p> */}
                                         <p>
                                           <strong>Status:</strong>{" "}
                                           {selectedContract.is_expired ? (

@@ -37,3 +37,11 @@ export const contractUpdateStatusApiCall =
 export const getNotificationsApiCall =
   process.env.NEXT_PUBLIC_API_BASE_URL +
   "safar-capital/api/notifications/get-all";
+export const getAllActionsApiCall =
+  process.env.NEXT_PUBLIC_API_BASE_URL + "safar-capital/api/action/get-all";
+export const postRoleApiCall =
+  process.env.NEXT_PUBLIC_API_BASE_URL + "safar-capital/api/role/post";
+export const getAllRolesApiCall =
+  process.env.NEXT_PUBLIC_API_BASE_URL + "safar-capital/api/role/get-all";
+export const deleteRoleApiCall =
+  process.env.NEXT_PUBLIC_API_BASE_URL + "safar-capital/api/role/delete";
