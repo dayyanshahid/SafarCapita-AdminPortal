@@ -12,7 +12,8 @@ const FCM = () => {
 
   // Debug state changes
   useEffect(() => {
-    console.log("Progress background updated:", progressBackground);
+    console.log("Progress background updated:");
+    // console.log("Progress background updated:", progressBackground);
   }, [progressBackground]);
 
   useEffect(() => {
@@ -20,7 +21,6 @@ const FCM = () => {
       console.warn("FCM: Messaging not initialized");
       return;
     }
-    // console.log("FCM: Starting token generation process");
 
     const registerServiceWorkerAndGetToken = async () => {
       try {
@@ -28,11 +28,9 @@ const FCM = () => {
         const registration = await navigator.serviceWorker.register(
           "/firebase-messaging-sw.js"
         );
-        // console.log("FCM: Service worker registered");
 
         // ✅ Wait until the service worker is fully activated
         if (!registration.active) {
-          // console.log("FCM: Waiting for service worker activation...");
           await new Promise((resolve) => {
             const interval = setInterval(() => {
               if (registration.active) {
@@ -41,10 +39,8 @@ const FCM = () => {
               }
             }, 100);
           });
-          // console.log("FCM: Service worker activated");
         }
 
-        // console.log("FCM: Getting token...");
         const currentToken = await getToken(messaging, {
           vapidKey:
             "BPdoY0yaAoYolHzwBh3-yW_VsRluyemdfdkGoccLRBUQJ4YQbR4lzgW3Hh3i-z1FxjQ3WZW1TgT2eE4QGTbYUik",
@@ -52,7 +48,7 @@ const FCM = () => {
         });
 
         if (currentToken) {
-          console.log("FCM: Token generated successfully:", currentToken);
+          // console.log("FCM: Token generated successfully:", currentToken);
           if (typeof window !== "undefined") {
             window.localStorage.setItem("fcm_token", currentToken);
             // Send token to your backend
@@ -79,7 +75,7 @@ const FCM = () => {
 
         // Foreground message listener
         onMessage(messaging, (payload) => {
-          console.log("📩 Message received in foreground: ", payload);
+          // console.log("📩 Message received in foreground: ", payload);
           const { colour } = payload?.data ?? {};
           const { title, body } = payload?.notification ?? {};
 
@@ -98,13 +94,6 @@ const FCM = () => {
               toastType = "success";
               toastColor = "#149914";
             }
-
-            console.log(
-              "Using toast type:",
-              toastType,
-              "and color:",
-              toastColor
-            );
 
             toast(body, {
               type: toastType,

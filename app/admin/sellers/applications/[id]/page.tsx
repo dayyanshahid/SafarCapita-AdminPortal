@@ -763,8 +763,8 @@ export default function SellerApplicationDetailPage({ params }: PageProps) {
     </div>
   );
 
-  console.log("apiData?.result?.company?", apiData);
-  debugger;
+  // console.log("apiData?.result?.company?", apiData);
+  // debugger;
 
   const handleEditSubmit = async () => {
     try {

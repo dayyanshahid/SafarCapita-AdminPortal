@@ -37,7 +37,7 @@ export default function LoginPage() {
     e.preventDefault();
 
     const fcmToken = localStorage.getItem("fcm_token");
-    console.log("FCM Token before login:", fcmToken);
+    // console.log("FCM Token before login:", fcmToken);
     setIsLoading(true);
     setError("");
 
@@ -47,7 +47,7 @@ export default function LoginPage() {
         method: "POST",
         data: { email, password, fcm_token: fcmToken },
       });
-
+      debugger;
       const { data } = response;
 
       if (data.success && data.token && data.result) {
@@ -68,7 +68,7 @@ export default function LoginPage() {
         // Use push to maintain navigation history
         router.push("/admin");
       } else {
-        throw new Error(data.error_message || "Login failed");
+        throw new Error(data.error_message || data.message || "Login failed");
       }
     } catch (error: any) {
       setError(error.message || "Invalid credentials. Please try again.");

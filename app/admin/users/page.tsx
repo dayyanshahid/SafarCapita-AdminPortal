@@ -309,9 +309,10 @@ export default function UserManagementPage() {
   // handleCreateUser is already defined above
 
   const handleEditUser = (user: any) => {
-    debugger;
     setSelectedUser(user);
-    setIsEditUserOpen(true);
+    setTimeout(() => {
+      setIsEditUserOpen(true);
+    }, 0);
   };
 
   const handleDeleteUser = (user: any) => {
@@ -464,7 +465,18 @@ export default function UserManagementPage() {
         const result = await onSubmit(formData);
         // Only close if the API call was successful
         if (result?.data?.success) {
-          onClose();
+          setFormData({
+            name: "",
+            email: "",
+            password: "",
+            phone: "",
+            role: "",
+            department: "",
+            status: "active",
+          });
+          setTimeout(() => {
+            onClose();
+          }, 0);
         }
       } catch (error: any) {
         console.error("Form submission failed:", error);
@@ -486,7 +498,18 @@ export default function UserManagementPage() {
         open={isOpen}
         onOpenChange={(open) => {
           if (!open && !isSubmitting) {
-            onClose();
+            setFormData({
+              name: "",
+              email: "",
+              password: "",
+              phone: "",
+              role: "",
+              department: "",
+              status: "active",
+            });
+            setTimeout(() => {
+              onClose();
+            }, 0);
           }
         }}
       >
@@ -600,7 +623,7 @@ export default function UserManagementPage() {
               </div>
             </div>
 
-            {isEdit && (
+            {/* {isEdit && (
               <div>
                 <Label htmlFor="userStatus">Status</Label>
                 <Select
@@ -620,7 +643,7 @@ export default function UserManagementPage() {
                   </SelectContent>
                 </Select>
               </div>
-            )}
+            )} */}
           </form>
           <DialogFooter>
             <Button
@@ -864,7 +887,10 @@ export default function UserManagementPage() {
       {selectedUser && (
         <UserFormDialog
           isOpen={isEditUserOpen}
-          onClose={() => setIsEditUserOpen(false)}
+          onClose={() => {
+            setIsEditUserOpen(false);
+            setSelectedUser(null);
+          }}
           onSubmit={async (data) => {
             const updateData: any = {
               _id: selectedUser.employeeId,

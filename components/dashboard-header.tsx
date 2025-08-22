@@ -56,7 +56,7 @@ export function DashboardHeader({
     try {
       setIsLoading(true);
       const userData = JSON.parse(localStorage.getItem("sanad_user") || "{}");
-      console.log("Fetching notifications for user:", userData.userId);
+      // console.log("Fetching notifications for user:", userData.userId);
 
       const response = await makeRequest({
         method: "GET",
@@ -66,10 +66,10 @@ export function DashboardHeader({
         },
       });
 
-      console.log("API Response:", response?.data);
+      // console.log("API Response:", response?.data);
       if (response?.data?.response_code === 200) {
         setNotifications(response?.data?.result?.data || []);
-        console.log("Notifications loaded:", response?.data?.result?.data);
+        // console.log("Notifications loaded:", response?.data?.result?.data);
       }
     } catch (error) {
       console.error("Error fetching notifications:", error);

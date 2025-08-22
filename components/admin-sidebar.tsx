@@ -111,7 +111,10 @@ export function AdminSidebar({
                 <Collapsible
                   key={item.title}
                   asChild
-                  defaultOpen={item.title === "Financing Requests"}
+                  defaultOpen={
+                    item.title === "Admin Management" ||
+                    item.title === "Financing Requests"
+                  }
                   className="group/collapsible"
                 >
                   <SidebarMenuItem>

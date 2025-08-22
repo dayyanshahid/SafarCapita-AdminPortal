@@ -150,7 +150,7 @@ export default function CreateManualApplicationPage() {
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
-      console.log("Creating manual application:", applicationData);
+      // console.log("Creating manual application:", applicationData);
 
       // Show success message and redirect
       alert(`Application ${applicationId} created successfully!`);

@@ -35,7 +35,7 @@ messaging.onBackgroundMessage(function (payload) {
     };
     self.registration.showNotification(title, notificationOptions);
   } else {
-    console.warn("No notification object found in payload:", payload);
+    // console.warn("No notification object found in payload:", payload);
   }
 });
 

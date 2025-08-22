@@ -1,22 +1,37 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Card, CardContent, CardTitle } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
-import { Progress } from "@/components/ui/progress"
-import { Badge } from "@/components/ui/badge"
-import { Building2, User, DollarSign, Save, ArrowLeft, TrendingUp, CreditCard, CheckCircle } from "lucide-react"
-import { DashboardHeader } from "@/components/dashboard-header"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Card, CardContent, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
+import {
+  Building2,
+  User,
+  DollarSign,
+  Save,
+  ArrowLeft,
+  TrendingUp,
+  CreditCard,
+  CheckCircle,
+} from "lucide-react";
+import { DashboardHeader } from "@/components/dashboard-header";
 
 export default function CreateManualApplicationPage() {
-  const router = useRouter()
-  const [currentStep, setCurrentStep] = useState(0)
+  const router = useRouter();
+  const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState({
     // Company Information
     companyName: "",
@@ -61,7 +76,7 @@ export default function CreateManualApplicationPage() {
     // Additional Information
     priority: "medium",
     notes: "",
-  })
+  });
 
   const steps = [
     { id: "company", title: "Company Info", icon: Building2 },
@@ -70,11 +85,11 @@ export default function CreateManualApplicationPage() {
     { id: "operations", title: "Operations", icon: TrendingUp },
     { id: "banking", title: "Banking Info", icon: CreditCard },
     { id: "review", title: "Review", icon: CheckCircle },
-  ]
+  ];
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
-  }
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
 
   const handleSubmit = () => {
     const applicationData = {
@@ -90,58 +105,79 @@ export default function CreateManualApplicationPage() {
       totalDocuments: 5,
       riskLevel: "medium",
       source: "manual",
-    }
+    };
 
     // In a real app, you would save this to your backend
-    console.log("Creating manual application:", applicationData)
+    // console.log("Creating manual application:", applicationData)
 
     // Redirect back to applications list
-    router.push("/admin/sellers/applications")
-  }
+    router.push("/admin/sellers/applications");
+  };
 
   const nextStep = () => {
     if (currentStep < steps.length - 1) {
-      setCurrentStep(currentStep + 1)
+      setCurrentStep(currentStep + 1);
     }
-  }
+  };
 
   const prevStep = () => {
     if (currentStep > 0) {
-      setCurrentStep(currentStep - 1)
+      setCurrentStep(currentStep - 1);
     }
-  }
+  };
 
   const isStepValid = (stepIndex: number) => {
     switch (stepIndex) {
       case 0: // Company Info
-        return formData.companyName && formData.businessType && formData.industry && formData.taxId
+        return (
+          formData.companyName &&
+          formData.businessType &&
+          formData.industry &&
+          formData.taxId
+        );
       case 1: // Contact Info
-        return formData.contactPerson && formData.email && formData.phone
+        return formData.contactPerson && formData.email && formData.phone;
       case 2: // Financial Info
-        return formData.requestedLimit && formData.annualRevenue && formData.averageOrderValue
+        return (
+          formData.requestedLimit &&
+          formData.annualRevenue &&
+          formData.averageOrderValue
+        );
       case 3: // Operations
-        return formData.cashFlowCycle && formData.numberOfEmployees
+        return formData.cashFlowCycle && formData.numberOfEmployees;
       case 4: // Banking Info
-        return formData.bankName && formData.accountType && formData.accountHolderName && formData.accountNumber
+        return (
+          formData.bankName &&
+          formData.accountType &&
+          formData.accountHolderName &&
+          formData.accountNumber
+        );
       default:
-        return true
+        return true;
     }
-  }
+  };
 
-  const completionPercentage = ((currentStep + 1) / steps.length) * 100
+  const completionPercentage = ((currentStep + 1) / steps.length) * 100;
 
   const headerActions = (
     <div className="flex gap-3">
-      <Button variant="outline" onClick={() => router.back()} className="gap-2 bg-transparent">
+      <Button
+        variant="outline"
+        onClick={() => router.back()}
+        className="gap-2 bg-transparent"
+      >
         <ArrowLeft className="h-4 w-4" />
         Back
       </Button>
     </div>
-  )
+  );
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 pt-0">
-      <DashboardHeader title="Create Manual Application" actions={headerActions} />
+      <DashboardHeader
+        title="Create Manual Application"
+        actions={headerActions}
+      />
 
       {/* Progress Overview */}
       <Card>
@@ -150,7 +186,8 @@ export default function CreateManualApplicationPage() {
             <div>
               <h3 className="text-lg font-semibold">Application Progress</h3>
               <p className="text-sm text-muted-foreground">
-                Step {currentStep + 1} of {steps.length}: {steps[currentStep].title}
+                Step {currentStep + 1} of {steps.length}:{" "}
+                {steps[currentStep].title}
               </p>
             </div>
             <Badge variant="outline" className="text-sm">
@@ -169,19 +206,31 @@ export default function CreateManualApplicationPage() {
               <div key={step.id} className="flex items-center flex-shrink-0">
                 <div
                   className={`flex items-center justify-center w-12 h-12 rounded-full border-2 ${
-                    index <= currentStep ? "bg-red-600 border-red-600 text-white" : "border-gray-300 text-gray-400"
+                    index <= currentStep
+                      ? "bg-red-600 border-red-600 text-white"
+                      : "border-gray-300 text-gray-400"
                   }`}
                 >
                   <step.icon className="h-5 w-5" />
                 </div>
                 <div className="ml-3">
-                  <div className={`text-sm font-medium ${index <= currentStep ? "text-red-600" : "text-gray-400"}`}>
+                  <div
+                    className={`text-sm font-medium ${
+                      index <= currentStep ? "text-red-600" : "text-gray-400"
+                    }`}
+                  >
                     {step.title}
                   </div>
-                  <div className="text-xs text-muted-foreground">Step {index + 1}</div>
+                  <div className="text-xs text-muted-foreground">
+                    Step {index + 1}
+                  </div>
                 </div>
                 {index < steps.length - 1 && (
-                  <div className={`w-16 h-px mx-4 ${index < currentStep ? "bg-red-600" : "bg-gray-300"}`} />
+                  <div
+                    className={`w-16 h-px mx-4 ${
+                      index < currentStep ? "bg-red-600" : "bg-gray-300"
+                    }`}
+                  />
                 )}
               </div>
             ))}
@@ -210,7 +259,9 @@ export default function CreateManualApplicationPage() {
                   <Input
                     id="companyName"
                     value={formData.companyName}
-                    onChange={(e) => handleInputChange("companyName", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("companyName", e.target.value)
+                    }
                     placeholder="Enter company legal name"
                     className="mt-1"
                   />
@@ -219,7 +270,9 @@ export default function CreateManualApplicationPage() {
                   <Label htmlFor="businessType">Business Type *</Label>
                   <Select
                     value={formData.businessType}
-                    onValueChange={(value) => handleInputChange("businessType", value)}
+                    onValueChange={(value) =>
+                      handleInputChange("businessType", value)
+                    }
                   >
                     <SelectTrigger className="mt-1">
                       <SelectValue placeholder="Select business type" />
@@ -228,29 +281,44 @@ export default function CreateManualApplicationPage() {
                       <SelectItem value="corporation">Corporation</SelectItem>
                       <SelectItem value="llc">LLC</SelectItem>
                       <SelectItem value="partnership">Partnership</SelectItem>
-                      <SelectItem value="sole_proprietorship">Sole Proprietorship</SelectItem>
+                      <SelectItem value="sole_proprietorship">
+                        Sole Proprietorship
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
                   <Label htmlFor="industry">Industry *</Label>
-                  <Select value={formData.industry} onValueChange={(value) => handleInputChange("industry", value)}>
+                  <Select
+                    value={formData.industry}
+                    onValueChange={(value) =>
+                      handleInputChange("industry", value)
+                    }
+                  >
                     <SelectTrigger className="mt-1">
                       <SelectValue placeholder="Select industry" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="technology">Technology</SelectItem>
-                      <SelectItem value="manufacturing">Manufacturing</SelectItem>
+                      <SelectItem value="manufacturing">
+                        Manufacturing
+                      </SelectItem>
                       <SelectItem value="retail">Retail</SelectItem>
                       <SelectItem value="healthcare">Healthcare</SelectItem>
                       <SelectItem value="finance">Finance</SelectItem>
                       <SelectItem value="construction">Construction</SelectItem>
-                      <SelectItem value="transportation">Transportation</SelectItem>
-                      <SelectItem value="textiles">Textiles & Apparel</SelectItem>
+                      <SelectItem value="transportation">
+                        Transportation
+                      </SelectItem>
+                      <SelectItem value="textiles">
+                        Textiles & Apparel
+                      </SelectItem>
                       <SelectItem value="agriculture">Agriculture</SelectItem>
                       <SelectItem value="automotive">Automotive</SelectItem>
                       <SelectItem value="electronics">Electronics</SelectItem>
-                      <SelectItem value="food_beverage">Food & Beverage</SelectItem>
+                      <SelectItem value="food_beverage">
+                        Food & Beverage
+                      </SelectItem>
                       <SelectItem value="other">Other</SelectItem>
                     </SelectContent>
                   </Select>
@@ -270,7 +338,9 @@ export default function CreateManualApplicationPage() {
                   <Input
                     id="website"
                     value={formData.website}
-                    onChange={(e) => handleInputChange("website", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("website", e.target.value)
+                    }
                     placeholder="https://company.com"
                     className="mt-1"
                   />
@@ -281,7 +351,9 @@ export default function CreateManualApplicationPage() {
                     id="yearsInBusiness"
                     type="number"
                     value={formData.yearsInBusiness}
-                    onChange={(e) => handleInputChange("yearsInBusiness", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("yearsInBusiness", e.target.value)
+                    }
                     placeholder="5"
                     className="mt-1"
                   />
@@ -292,7 +364,9 @@ export default function CreateManualApplicationPage() {
                     id="employeeCount"
                     type="number"
                     value={formData.employeeCount}
-                    onChange={(e) => handleInputChange("employeeCount", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("employeeCount", e.target.value)
+                    }
                     placeholder="50"
                     className="mt-1"
                   />
@@ -303,18 +377,24 @@ export default function CreateManualApplicationPage() {
                     id="annualRevenue"
                     type="number"
                     value={formData.annualRevenue}
-                    onChange={(e) => handleInputChange("annualRevenue", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("annualRevenue", e.target.value)
+                    }
                     placeholder="1000000"
                     className="mt-1"
                   />
                 </div>
               </div>
               <div>
-                <Label htmlFor="businessDescription">Business Description</Label>
+                <Label htmlFor="businessDescription">
+                  Business Description
+                </Label>
                 <Textarea
                   id="businessDescription"
                   value={formData.businessDescription}
-                  onChange={(e) => handleInputChange("businessDescription", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("businessDescription", e.target.value)
+                  }
                   placeholder="Describe the company's business activities..."
                   rows={4}
                   className="mt-1"
@@ -341,7 +421,9 @@ export default function CreateManualApplicationPage() {
                   <Input
                     id="contactPerson"
                     value={formData.contactPerson}
-                    onChange={(e) => handleInputChange("contactPerson", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("contactPerson", e.target.value)
+                    }
                     placeholder="John Smith"
                     className="mt-1"
                   />
@@ -400,40 +482,56 @@ export default function CreateManualApplicationPage() {
                   Financial Information
                 </CardTitle>
                 <p className="text-sm text-muted-foreground mb-6">
-                  Provide financial details and market information for credit assessment.
+                  Provide financial details and market information for credit
+                  assessment.
                 </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <Label htmlFor="requestedLimit">Requested Credit Limit *</Label>
+                  <Label htmlFor="requestedLimit">
+                    Requested Credit Limit *
+                  </Label>
                   <Input
                     id="requestedLimit"
                     type="number"
                     value={formData.requestedLimit}
-                    onChange={(e) => handleInputChange("requestedLimit", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("requestedLimit", e.target.value)
+                    }
                     placeholder="500000"
                     className="mt-1"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="averageOrderValue">Average Order Value *</Label>
+                  <Label htmlFor="averageOrderValue">
+                    Average Order Value *
+                  </Label>
                   <Input
                     id="averageOrderValue"
                     type="number"
                     value={formData.averageOrderValue}
-                    onChange={(e) => handleInputChange("averageOrderValue", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("averageOrderValue", e.target.value)
+                    }
                     placeholder="25000"
                     className="mt-1"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="monthlyTransactionVolume">Monthly Transaction Volume</Label>
+                  <Label htmlFor="monthlyTransactionVolume">
+                    Monthly Transaction Volume
+                  </Label>
                   <Input
                     id="monthlyTransactionVolume"
                     type="number"
                     value={formData.monthlyTransactionVolume}
-                    onChange={(e) => handleInputChange("monthlyTransactionVolume", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange(
+                        "monthlyTransactionVolume",
+                        e.target.value
+                      )
+                    }
                     placeholder="150000"
                     className="mt-1"
                   />
@@ -446,11 +544,18 @@ export default function CreateManualApplicationPage() {
                 <h4 className="text-lg font-semibold mb-4">Market Presence</h4>
                 <div className="space-y-4">
                   <div>
-                    <Label htmlFor="primaryExportMarkets">Primary Export Markets</Label>
+                    <Label htmlFor="primaryExportMarkets">
+                      Primary Export Markets
+                    </Label>
                     <Textarea
                       id="primaryExportMarkets"
                       value={formData.primaryExportMarkets}
-                      onChange={(e) => handleInputChange("primaryExportMarkets", e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange(
+                          "primaryExportMarkets",
+                          e.target.value
+                        )
+                      }
                       placeholder="e.g., United States, European Union, Canada, Australia..."
                       rows={2}
                       className="mt-1"
@@ -461,7 +566,9 @@ export default function CreateManualApplicationPage() {
                     <Textarea
                       id="majorClients"
                       value={formData.majorClients}
-                      onChange={(e) => handleInputChange("majorClients", e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("majorClients", e.target.value)
+                      }
                       placeholder="List major clients or buyer companies..."
                       rows={3}
                       className="mt-1"
@@ -486,10 +593,14 @@ export default function CreateManualApplicationPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <Label htmlFor="cashFlowCycle">Cash Flow Cycle (Days) *</Label>
+                  <Label htmlFor="cashFlowCycle">
+                    Cash Flow Cycle (Days) *
+                  </Label>
                   <Select
                     value={formData.cashFlowCycle}
-                    onValueChange={(value) => handleInputChange("cashFlowCycle", value)}
+                    onValueChange={(value) =>
+                      handleInputChange("cashFlowCycle", value)
+                    }
                   >
                     <SelectTrigger className="mt-1">
                       <SelectValue placeholder="Select cash flow cycle" />
@@ -504,12 +615,16 @@ export default function CreateManualApplicationPage() {
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="numberOfEmployees">Number of Employees *</Label>
+                  <Label htmlFor="numberOfEmployees">
+                    Number of Employees *
+                  </Label>
                   <Input
                     id="numberOfEmployees"
                     type="number"
                     value={formData.numberOfEmployees}
-                    onChange={(e) => handleInputChange("numberOfEmployees", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("numberOfEmployees", e.target.value)
+                    }
                     placeholder="50"
                     className="mt-1"
                   />
@@ -536,7 +651,9 @@ export default function CreateManualApplicationPage() {
                   <Input
                     id="bankName"
                     value={formData.bankName}
-                    onChange={(e) => handleInputChange("bankName", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("bankName", e.target.value)
+                    }
                     placeholder="Chase Bank"
                     className="mt-1"
                   />
@@ -545,26 +662,40 @@ export default function CreateManualApplicationPage() {
                   <Label htmlFor="accountType">Account Type *</Label>
                   <Select
                     value={formData.accountType}
-                    onValueChange={(value) => handleInputChange("accountType", value)}
+                    onValueChange={(value) =>
+                      handleInputChange("accountType", value)
+                    }
                   >
                     <SelectTrigger className="mt-1">
                       <SelectValue placeholder="Select account type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="business_checking">Business Checking</SelectItem>
-                      <SelectItem value="business_savings">Business Savings</SelectItem>
+                      <SelectItem value="business_checking">
+                        Business Checking
+                      </SelectItem>
+                      <SelectItem value="business_savings">
+                        Business Savings
+                      </SelectItem>
                       <SelectItem value="money_market">Money Market</SelectItem>
-                      <SelectItem value="current_account">Current Account</SelectItem>
-                      <SelectItem value="trade_finance">Trade Finance Account</SelectItem>
+                      <SelectItem value="current_account">
+                        Current Account
+                      </SelectItem>
+                      <SelectItem value="trade_finance">
+                        Trade Finance Account
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="accountHolderName">Account Holder Name *</Label>
+                  <Label htmlFor="accountHolderName">
+                    Account Holder Name *
+                  </Label>
                   <Input
                     id="accountHolderName"
                     value={formData.accountHolderName}
-                    onChange={(e) => handleInputChange("accountHolderName", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("accountHolderName", e.target.value)
+                    }
                     placeholder="Company Legal Name"
                     className="mt-1"
                   />
@@ -574,7 +705,9 @@ export default function CreateManualApplicationPage() {
                   <Input
                     id="accountNumber"
                     value={formData.accountNumber}
-                    onChange={(e) => handleInputChange("accountNumber", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("accountNumber", e.target.value)
+                    }
                     placeholder="1234567890"
                     className="mt-1"
                   />
@@ -584,7 +717,9 @@ export default function CreateManualApplicationPage() {
                   <Input
                     id="routingNumber"
                     value={formData.routingNumber}
-                    onChange={(e) => handleInputChange("routingNumber", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("routingNumber", e.target.value)
+                    }
                     placeholder="021000021"
                     className="mt-1"
                   />
@@ -594,7 +729,9 @@ export default function CreateManualApplicationPage() {
                   <Input
                     id="swiftBicCode"
                     value={formData.swiftBicCode}
-                    onChange={(e) => handleInputChange("swiftBicCode", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("swiftBicCode", e.target.value)
+                    }
                     placeholder="CHASUS33"
                     className="mt-1"
                   />
@@ -604,7 +741,9 @@ export default function CreateManualApplicationPage() {
                   <Input
                     id="ibanCode"
                     value={formData.ibanCode}
-                    onChange={(e) => handleInputChange("ibanCode", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("ibanCode", e.target.value)
+                    }
                     placeholder="GB29 NWBK 6016 1331 9268 19"
                     className="mt-1"
                   />
@@ -613,7 +752,9 @@ export default function CreateManualApplicationPage() {
                   <Label htmlFor="primaryCurrency">Primary Currency</Label>
                   <Select
                     value={formData.primaryCurrency}
-                    onValueChange={(value) => handleInputChange("primaryCurrency", value)}
+                    onValueChange={(value) =>
+                      handleInputChange("primaryCurrency", value)
+                    }
                   >
                     <SelectTrigger className="mt-1">
                       <SelectValue placeholder="Select currency" />
@@ -623,7 +764,9 @@ export default function CreateManualApplicationPage() {
                       <SelectItem value="EUR">EUR - Euro</SelectItem>
                       <SelectItem value="GBP">GBP - British Pound</SelectItem>
                       <SelectItem value="CAD">CAD - Canadian Dollar</SelectItem>
-                      <SelectItem value="AUD">AUD - Australian Dollar</SelectItem>
+                      <SelectItem value="AUD">
+                        AUD - Australian Dollar
+                      </SelectItem>
                       <SelectItem value="JPY">JPY - Japanese Yen</SelectItem>
                       <SelectItem value="CHF">CHF - Swiss Franc</SelectItem>
                       <SelectItem value="CNY">CNY - Chinese Yuan</SelectItem>
@@ -636,7 +779,9 @@ export default function CreateManualApplicationPage() {
                 <Textarea
                   id="bankAddress"
                   value={formData.bankAddress}
-                  onChange={(e) => handleInputChange("bankAddress", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("bankAddress", e.target.value)
+                  }
                   placeholder="Bank's full address including city, state, and postal code"
                   rows={2}
                   className="mt-1"
@@ -653,22 +798,29 @@ export default function CreateManualApplicationPage() {
                   Review Application
                 </CardTitle>
                 <p className="text-sm text-muted-foreground mb-6">
-                  Please review all information before submitting the application.
+                  Please review all information before submitting the
+                  application.
                 </p>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div className="space-y-6">
                   <div>
-                    <h4 className="font-semibold text-gray-900 mb-3">Company Information</h4>
+                    <h4 className="font-semibold text-gray-900 mb-3">
+                      Company Information
+                    </h4>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span className="text-gray-600">Name:</span>
-                        <span className="font-medium">{formData.companyName}</span>
+                        <span className="font-medium">
+                          {formData.companyName}
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Type:</span>
-                        <span className="font-medium">{formData.businessType}</span>
+                        <span className="font-medium">
+                          {formData.businessType}
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Industry:</span>
@@ -681,26 +833,37 @@ export default function CreateManualApplicationPage() {
                       {formData.website && (
                         <div className="flex justify-between">
                           <span className="text-gray-600">Website:</span>
-                          <span className="font-medium">{formData.website}</span>
+                          <span className="font-medium">
+                            {formData.website}
+                          </span>
                         </div>
                       )}
                       {formData.yearsInBusiness && (
                         <div className="flex justify-between">
-                          <span className="text-gray-600">Years in Business:</span>
-                          <span className="font-medium">{formData.yearsInBusiness}</span>
+                          <span className="text-gray-600">
+                            Years in Business:
+                          </span>
+                          <span className="font-medium">
+                            {formData.yearsInBusiness}
+                          </span>
                         </div>
                       )}
                       {formData.employeeCount && (
                         <div className="flex justify-between">
                           <span className="text-gray-600">Employees:</span>
-                          <span className="font-medium">{formData.employeeCount}</span>
+                          <span className="font-medium">
+                            {formData.employeeCount}
+                          </span>
                         </div>
                       )}
                       {formData.annualRevenue && (
                         <div className="flex justify-between">
                           <span className="text-gray-600">Annual Revenue:</span>
                           <span className="font-medium">
-                            ${Number.parseInt(formData.annualRevenue).toLocaleString()}
+                            $
+                            {Number.parseInt(
+                              formData.annualRevenue
+                            ).toLocaleString()}
                           </span>
                         </div>
                       )}
@@ -708,11 +871,15 @@ export default function CreateManualApplicationPage() {
                   </div>
 
                   <div>
-                    <h4 className="font-semibold text-gray-900 mb-3">Contact Information</h4>
+                    <h4 className="font-semibold text-gray-900 mb-3">
+                      Contact Information
+                    </h4>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span className="text-gray-600">Contact:</span>
-                        <span className="font-medium">{formData.contactPerson}</span>
+                        <span className="font-medium">
+                          {formData.contactPerson}
+                        </span>
                       </div>
                       {formData.title && (
                         <div className="flex justify-between">
@@ -738,15 +905,23 @@ export default function CreateManualApplicationPage() {
                   </div>
 
                   <div>
-                    <h4 className="font-semibold text-gray-900 mb-3">Operations</h4>
+                    <h4 className="font-semibold text-gray-900 mb-3">
+                      Operations
+                    </h4>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span className="text-gray-600">Cash Flow Cycle:</span>
-                        <span className="font-medium">{formData.cashFlowCycle} days</span>
+                        <span className="font-medium">
+                          {formData.cashFlowCycle} days
+                        </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Number of Employees:</span>
-                        <span className="font-medium">{formData.numberOfEmployees}</span>
+                        <span className="text-gray-600">
+                          Number of Employees:
+                        </span>
+                        <span className="font-medium">
+                          {formData.numberOfEmployees}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -754,45 +929,68 @@ export default function CreateManualApplicationPage() {
 
                 <div className="space-y-6">
                   <div>
-                    <h4 className="font-semibold text-gray-900 mb-3">Financial Information</h4>
+                    <h4 className="font-semibold text-gray-900 mb-3">
+                      Financial Information
+                    </h4>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span className="text-gray-600">Requested Limit:</span>
                         <span className="font-medium">
-                          ${Number.parseInt(formData.requestedLimit || "0").toLocaleString()}
+                          $
+                          {Number.parseInt(
+                            formData.requestedLimit || "0"
+                          ).toLocaleString()}
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Average Order Value:</span>
+                        <span className="text-gray-600">
+                          Average Order Value:
+                        </span>
                         <span className="font-medium">
-                          ${Number.parseInt(formData.averageOrderValue || "0").toLocaleString()}
+                          $
+                          {Number.parseInt(
+                            formData.averageOrderValue || "0"
+                          ).toLocaleString()}
                         </span>
                       </div>
                       {formData.monthlyTransactionVolume && (
                         <div className="flex justify-between">
-                          <span className="text-gray-600">Monthly Transaction Volume:</span>
+                          <span className="text-gray-600">
+                            Monthly Transaction Volume:
+                          </span>
                           <span className="font-medium">
-                            ${Number.parseInt(formData.monthlyTransactionVolume).toLocaleString()}
+                            $
+                            {Number.parseInt(
+                              formData.monthlyTransactionVolume
+                            ).toLocaleString()}
                           </span>
                         </div>
                       )}
                       {formData.primaryExportMarkets && (
                         <div>
-                          <span className="text-gray-600">Primary Export Markets:</span>
-                          <p className="font-medium mt-1">{formData.primaryExportMarkets}</p>
+                          <span className="text-gray-600">
+                            Primary Export Markets:
+                          </span>
+                          <p className="font-medium mt-1">
+                            {formData.primaryExportMarkets}
+                          </p>
                         </div>
                       )}
                       {formData.majorClients && (
                         <div>
                           <span className="text-gray-600">Major Clients:</span>
-                          <p className="font-medium mt-1">{formData.majorClients}</p>
+                          <p className="font-medium mt-1">
+                            {formData.majorClients}
+                          </p>
                         </div>
                       )}
                     </div>
                   </div>
 
                   <div>
-                    <h4 className="font-semibold text-gray-900 mb-3">Banking Information</h4>
+                    <h4 className="font-semibold text-gray-900 mb-3">
+                      Banking Information
+                    </h4>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span className="text-gray-600">Bank:</span>
@@ -800,32 +998,46 @@ export default function CreateManualApplicationPage() {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Account Type:</span>
-                        <span className="font-medium">{formData.accountType.replace("_", " ")}</span>
+                        <span className="font-medium">
+                          {formData.accountType.replace("_", " ")}
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Account Holder:</span>
-                        <span className="font-medium">{formData.accountHolderName}</span>
+                        <span className="font-medium">
+                          {formData.accountHolderName}
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Account Number:</span>
-                        <span className="font-medium">****{formData.accountNumber.slice(-4)}</span>
+                        <span className="font-medium">
+                          ****{formData.accountNumber.slice(-4)}
+                        </span>
                       </div>
                       {formData.routingNumber && (
                         <div className="flex justify-between">
                           <span className="text-gray-600">Routing Number:</span>
-                          <span className="font-medium">{formData.routingNumber}</span>
+                          <span className="font-medium">
+                            {formData.routingNumber}
+                          </span>
                         </div>
                       )}
                       {formData.swiftBicCode && (
                         <div className="flex justify-between">
                           <span className="text-gray-600">SWIFT/BIC:</span>
-                          <span className="font-medium">{formData.swiftBicCode}</span>
+                          <span className="font-medium">
+                            {formData.swiftBicCode}
+                          </span>
                         </div>
                       )}
                       {formData.primaryCurrency && (
                         <div className="flex justify-between">
-                          <span className="text-gray-600">Primary Currency:</span>
-                          <span className="font-medium">{formData.primaryCurrency}</span>
+                          <span className="text-gray-600">
+                            Primary Currency:
+                          </span>
+                          <span className="font-medium">
+                            {formData.primaryCurrency}
+                          </span>
                         </div>
                       )}
                     </div>
@@ -833,14 +1045,20 @@ export default function CreateManualApplicationPage() {
 
                   {formData.businessDescription && (
                     <div>
-                      <h4 className="font-semibold text-gray-900 mb-3">Business Description</h4>
-                      <p className="text-sm text-gray-600">{formData.businessDescription}</p>
+                      <h4 className="font-semibold text-gray-900 mb-3">
+                        Business Description
+                      </h4>
+                      <p className="text-sm text-gray-600">
+                        {formData.businessDescription}
+                      </p>
                     </div>
                   )}
 
                   {formData.notes && (
                     <div>
-                      <h4 className="font-semibold text-gray-900 mb-3">Additional Notes</h4>
+                      <h4 className="font-semibold text-gray-900 mb-3">
+                        Additional Notes
+                      </h4>
                       <p className="text-sm text-gray-600">{formData.notes}</p>
                     </div>
                   )}
@@ -849,7 +1067,12 @@ export default function CreateManualApplicationPage() {
 
               <div className="mt-6">
                 <Label htmlFor="priority">Application Priority</Label>
-                <Select value={formData.priority} onValueChange={(value) => handleInputChange("priority", value)}>
+                <Select
+                  value={formData.priority}
+                  onValueChange={(value) =>
+                    handleInputChange("priority", value)
+                  }
+                >
                   <SelectTrigger className="mt-1 max-w-xs">
                     <SelectValue />
                   </SelectTrigger>
@@ -881,7 +1104,11 @@ export default function CreateManualApplicationPage() {
       <Card>
         <CardContent className="p-6">
           <div className="flex justify-between">
-            <Button variant="outline" onClick={prevStep} disabled={currentStep === 0}>
+            <Button
+              variant="outline"
+              onClick={prevStep}
+              disabled={currentStep === 0}
+            >
               Previous
             </Button>
 
@@ -891,11 +1118,18 @@ export default function CreateManualApplicationPage() {
               </Button>
 
               {currentStep < steps.length - 1 ? (
-                <Button onClick={nextStep} disabled={!isStepValid(currentStep)} className="bg-red-600 hover:bg-red-700">
+                <Button
+                  onClick={nextStep}
+                  disabled={!isStepValid(currentStep)}
+                  className="bg-red-600 hover:bg-red-700"
+                >
                   Next Step
                 </Button>
               ) : (
-                <Button onClick={handleSubmit} className="bg-green-600 hover:bg-green-700">
+                <Button
+                  onClick={handleSubmit}
+                  className="bg-green-600 hover:bg-green-700"
+                >
                   <Save className="h-4 w-4 mr-2" />
                   Create Application
                 </Button>
@@ -905,5 +1139,5 @@ export default function CreateManualApplicationPage() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
