@@ -1052,7 +1052,7 @@ export default function UnifiedSellerManagementPage() {
 
   const headerActions = (
     <div className="flex gap-3">
-      <Button
+      {/* <Button
         variant="outline"
         className="gap-2 bg-transparent"
         onClick={handleExportData}
@@ -1060,7 +1060,7 @@ export default function UnifiedSellerManagementPage() {
       >
         <Download className="h-4 w-4" />
         {isExporting ? "Exporting..." : "Export Data"}
-      </Button>
+      </Button> */}
       {/* <Button
         variant="outline"
         className="gap-2 bg-transparent"

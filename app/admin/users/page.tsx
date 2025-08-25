@@ -934,30 +934,50 @@ export default function UserManagementPage() {
       )}
 
       {/* Delete User Dialog */}
-      <AlertDialog
-        open={isDeleteDialogOpen}
-        onOpenChange={setIsDeleteDialogOpen}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete User</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete {userToDelete?.name}? This action
-              cannot be undone. All user data and access will be permanently
-              removed.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmDeleteUser}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              Delete User
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {isDeleteDialogOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          {/* Overlay */}
+          <div
+            className="fixed inset-0 bg-black/50"
+            onClick={() => {
+              setIsDeleteDialogOpen(false);
+              setUserToDelete(null);
+            }}
+          />
+
+          {/* Dialog */}
+          <div className="relative z-50 w-full max-w-md rounded-lg bg-white p-6 shadow-lg">
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold">Delete User</h2>
+              <p className="mt-2 text-sm text-gray-500">
+                Are you sure you want to delete {userToDelete?.name}? This
+                action cannot be undone. All user data and access will be
+                permanently removed.
+              </p>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                className="rounded-md px-4 py-2 text-sm font-medium border border-gray-300 hover:bg-gray-50"
+                onClick={() => {
+                  setIsDeleteDialogOpen(false);
+                  setUserToDelete(null);
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+                onClick={confirmDeleteUser}
+              >
+                Delete User
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -649,6 +649,15 @@ export default function ContractManagementPage() {
 
         // Refresh the contracts list
         await fetchContracts(currentPage);
+      } else {
+        // Handle unsuccessful response
+        toast({
+          title: "Error",
+          description:
+            response.data.message ||
+            "Failed to update contract status. Please try again.",
+          variant: "error",
+        });
       }
     } catch (error) {
       console.error("Error updating contract status:", error);
@@ -658,7 +667,14 @@ export default function ContractManagementPage() {
         variant: "error",
       });
     } finally {
+      // Ensure loading state is always reset
       setIsStatusUpdating(false);
+      // Reset rejection dialog state if it was open
+      if (isRejectionDialogOpen) {
+        setIsRejectionDialogOpen(false);
+        setRejectionReason("");
+        setSelectedContractForRejection(null);
+      }
     }
   };
 
