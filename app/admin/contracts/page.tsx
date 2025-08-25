@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
+import CustomModal from "@/components/CustomModal";
 import makeRequest from "../../../Api's/ApiHelper";
 import {
   getAllContractsApiCall,
@@ -1781,31 +1782,29 @@ export default function ContractManagementPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Rejection Reason Dialog */}
-      <Dialog
-        open={isRejectionDialogOpen}
-        onOpenChange={setIsRejectionDialogOpen}
+      {/* Rejection Reason Modal */}
+      <CustomModal
+        isOpen={isRejectionDialogOpen}
+        onClose={() => {
+          setIsRejectionDialogOpen(false);
+          setRejectionReason("");
+          setSelectedContractForRejection(null);
+        }}
+        title="Enter Rejection Reason"
+        description="Please provide a reason for rejecting this contract."
       >
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Enter Rejection Reason</DialogTitle>
-            <DialogDescription>
-              Please provide a reason for rejecting this contract.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="rejection-reason">Reason</Label>
-              <Textarea
-                id="rejection-reason"
-                placeholder="Enter rejection reason..."
-                value={rejectionReason}
-                onChange={(e) => setRejectionReason(e.target.value)}
-                className="min-h-[100px]"
-              />
-            </div>
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="rejection-reason">Reason</Label>
+            <Textarea
+              id="rejection-reason"
+              placeholder="Enter rejection reason..."
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              className="min-h-[100px] w-full"
+            />
           </div>
-          <DialogFooter>
+          <div className="flex justify-end gap-3">
             <Button
               variant="outline"
               onClick={() => {
@@ -1836,9 +1835,9 @@ export default function ContractManagementPage() {
             >
               {isStatusUpdating ? "Updating..." : "Submit"}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+        </div>
+      </CustomModal>
 
       <Dialog open={isNewTemplateOpen} onOpenChange={setIsNewTemplateOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
